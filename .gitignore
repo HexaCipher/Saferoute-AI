@@ -16,3 +16,8 @@ cache/
 # OS specific
 .DS_Store
 Thumbs.db
+
+# Databases & local state
+*.db
+*.sqlite
+*.sqlite3

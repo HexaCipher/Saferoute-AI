@@ -276,3 +276,106 @@ Returns an executive prioritized ranking for city planners and traffic police au
   ]
 }
 ```
+
+---
+
+## 6. City Analytics & Data Export
+
+### `GET /api/v1/analytics/summary`
+Returns city-level macro safety intelligence and aggregate KPIs across all monitored corridors. Perfect for top-level dashboard stat cards, pie/donut charts, and executive reporting.
+
+**Response (`200 OK`)**:
+```json
+{
+  "total_corridors_analyzed": 3,
+  "total_road_network_km": 161.92,
+  "total_segments": 428,
+  "average_city_safety_score": 66.3,
+  "risk_distribution": {
+    "CRITICAL": {
+      "segment_count": 27,
+      "percentage": 6.3,
+      "total_km": 3.02
+    },
+    "HIGH": {
+      "segment_count": 136,
+      "percentage": 31.8,
+      "total_km": 52.1
+    },
+    "MEDIUM": {
+      "segment_count": 134,
+      "percentage": 31.3,
+      "total_km": 52.14
+    },
+    "LOW": {
+      "segment_count": 131,
+      "percentage": 30.6,
+      "total_km": 54.66
+    }
+  },
+  "corridor_breakdown": [
+    {
+      "corridor_id": "ORR",
+      "corridor_name": "Outer Ring Road (Silk Board to Hebbal)",
+      "segment_count": 190,
+      "length_km": 69.35,
+      "average_safety_score": 66.0,
+      "critical_segments": 17,
+      "high_segments": 53
+    },
+    {
+      "corridor_id": "OMR_WHITEFIELD",
+      "corridor_name": "Old Madras Road / Whitefield Corridor",
+      "segment_count": 164,
+      "length_km": 63.37,
+      "average_safety_score": 66.6,
+      "critical_segments": 10,
+      "high_segments": 53
+    },
+    {
+      "corridor_id": "HOSUR",
+      "corridor_name": "Hosur Road / Electronic City (NH 44)",
+      "segment_count": 74,
+      "length_km": 29.2,
+      "average_safety_score": 66.6,
+      "critical_segments": 0,
+      "high_segments": 30
+    }
+  ],
+  "vru_vulnerability_breakdown": {
+    "Two-Wheelers": 90.0,
+    "Two-Wheelers & Pedestrians": 8.2,
+    "Pedestrians": 1.9
+  },
+  "infrastructure_highlights": {
+    "verified_street_lighting_pct": 0.0,
+    "unverified_or_unlit_km": 161.92,
+    "total_crossings_cataloged": 742,
+    "total_bus_stops_cataloged": 35,
+    "avg_junction_density_per_km": 6.94
+  },
+  "projected_impact": {
+    "critical_segments_count": 27,
+    "critical_segments_km": 3.02,
+    "estimated_casualty_reduction_if_critical_fixed_pct": 26.5,
+    "top_recommended_intervention": "street_lighting_upgrade",
+    "key_takeaway": "Addressing 27 critical segments (3.02 km out of 161.92 km network) with targeted lighting upgrades and speed enforcement delivers a projected 26.5% reduction in night-time severe crashes."
+  }
+}
+```
+
+---
+
+### `GET /api/v1/analytics/export/csv`
+Exports the entire road safety dataset or filtered subset as a clean, standardized CSV file with `Content-Disposition: attachment`.
+
+**Query Parameters (Optional)**:
+- `corridor_id` (string, optional): Filter by corridor (`ORR`, `HOSUR`, `OMR_WHITEFIELD`).
+- `risk_tier` (string, optional): Filter by risk tier (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`).
+
+**Response (`200 OK`)**:
+- Headers:
+  - `Content-Type`: `text/csv; charset=utf-8`
+  - `Content-Disposition`: `attachment; filename="saferoute_ai_bengaluru_safety_report.csv"`
+- Output columns:
+  `segment_id, corridor_id, corridor_name, road_name, road_type, segment_length_m, safety_score, risk_tier, risk_score, night_risk_multiplier, primary_vulnerable_group, btp_station, street_lighting, lanes, speed_limit_kph, crossing_count, bus_stop_count, junction_count, confidence_level`

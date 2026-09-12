@@ -118,6 +118,12 @@ class RiskEngine:
         df['confidence_level'] = df.apply(self.get_confidence_level, axis=1)
         df['night_risk_multiplier'] = np.where(df['street_lighting'] == 'yes', 1.15, 1.45)
         
+        # Precompute VRU assessment
+        from backend.services.vru_engine import vru_engine
+        df['primary_vulnerable_group'] = df.apply(
+            lambda r: vru_engine.assess_vulnerability(r)['primary_vulnerable_group'], axis=1
+        )
+        
         self.df_segments = df
 
     @staticmethod

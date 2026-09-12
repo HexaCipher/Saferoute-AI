@@ -155,6 +155,34 @@ class RecommendationsResponse(BaseModel):
     recommendations: List[RecommendationItem]
 
 
+class RiskTierStat(BaseModel):
+    segment_count: int
+    percentage: float
+    total_km: float
+
+
+class CorridorStat(BaseModel):
+    corridor_id: str
+    corridor_name: str
+    segment_count: int
+    length_km: float
+    average_safety_score: float
+    critical_segments: int
+    high_segments: int
+
+
+class AnalyticsSummaryResponse(BaseModel):
+    total_corridors_analyzed: int
+    total_road_network_km: float
+    total_segments: int
+    average_city_safety_score: float
+    risk_distribution: Dict[str, RiskTierStat]
+    corridor_breakdown: List[CorridorStat]
+    vru_vulnerability_breakdown: Dict[str, float]
+    infrastructure_highlights: Dict[str, Any]
+    projected_impact: Dict[str, Any]
+
+
 # Legacy Accident CRUD Schemas (backward compatibility)
 from datetime import datetime
 
