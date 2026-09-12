@@ -36,15 +36,33 @@ class Prioritizer:
             }
 
         # Vectorized feature matrix
+        lanes = df['lanes'].fillna(2.0).astype(float)
+        speed = df['speed_limit_kph'].fillna(50.0).astype(float)
+        junc = df['junction_density_per_km'].astype(float)
+        cross = df['crossing_count'].astype(float)
+        bus = df['bus_stop_count'].astype(float)
+        lit = (df['street_lighting'] == 'yes').astype(float)
+        st_tot = df['btp_station_total_cases_2023'].astype(float)
+        st_fat = df['btp_station_fatal_cases_2023'].astype(float)
+
+        st_fat_ratio = st_fat / np.maximum(1.0, st_tot)
+        night_speed = speed * (1.0 - lit)
+        cross_deficit = np.maximum(0.0, bus - cross)
+        junc_transit = junc * (bus + 1.0)
+
         X_base = pd.DataFrame({
-            'lanes': df['lanes'].fillna(2.0).astype(float),
-            'speed_limit_kph': df['speed_limit_kph'].fillna(50.0).astype(float),
-            'junction_density_per_km': df['junction_density_per_km'].astype(float),
-            'crossing_count': df['crossing_count'].astype(float),
-            'bus_stop_count': df['bus_stop_count'].astype(float),
-            'lighting_is_verified_yes': (df['street_lighting'] == 'yes').astype(float),
-            'station_total_cases': df['btp_station_total_cases_2023'].astype(float),
-            'station_fatal_cases': df['btp_station_fatal_cases_2023'].astype(float)
+            'lanes': lanes,
+            'speed_limit_kph': speed,
+            'junction_density_per_km': junc,
+            'crossing_count': cross,
+            'bus_stop_count': bus,
+            'lighting_is_verified_yes': lit,
+            'station_total_cases': st_tot,
+            'station_fatal_cases': st_fat,
+            'station_fatality_ratio': st_fat_ratio,
+            'night_speed_index': night_speed,
+            'crossing_deficit': cross_deficit,
+            'junction_transit_conflict': junc_transit
         })
 
         base_scores = df['safety_score'].values
@@ -63,14 +81,19 @@ class Prioritizer:
             X_mod = X_base.copy()
             if it == "street_lighting_upgrade":
                 X_mod['lighting_is_verified_yes'] = 1.0
+                X_mod['night_speed_index'] = 0.0
             elif it == "speed_enforcement_camera":
                 X_mod['speed_limit_kph'] = np.minimum(50.0, X_mod['speed_limit_kph'] * 0.85)
+                X_mod['night_speed_index'] = X_mod['speed_limit_kph'] * (1.0 - X_mod['lighting_is_verified_yes'])
             elif it == "pedestrian_crossing_refuge":
                 X_mod['crossing_count'] += 2.0
+                X_mod['crossing_deficit'] = np.maximum(0.0, X_mod['bus_stop_count'] - X_mod['crossing_count'])
             elif it == "speed_calming_measures":
                 X_mod['speed_limit_kph'] = np.maximum(30.0, X_mod['speed_limit_kph'] - 12.0)
+                X_mod['night_speed_index'] = X_mod['speed_limit_kph'] * (1.0 - X_mod['lighting_is_verified_yes'])
             elif it == "junction_redesign":
                 X_mod['junction_density_per_km'] *= 0.60
+                X_mod['junction_transit_conflict'] = X_mod['junction_density_per_km'] * (X_mod['bus_stop_count'] + 1.0)
                 
             sim_scores = np.round(np.clip(100.0 * (1.0 - risk_engine.model.predict(X_mod)), 0.0, 100.0), 1)
             gains = np.maximum(0.0, np.round(sim_scores - base_scores, 1))

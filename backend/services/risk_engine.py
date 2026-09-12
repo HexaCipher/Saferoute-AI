@@ -15,7 +15,7 @@ import pandas as pd
 import geopandas as gpd
 import numpy as np
 from typing import Dict, List, Tuple, Any, Optional
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.model_selection import KFold, cross_val_score
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -25,11 +25,13 @@ MODEL_PATH = os.path.join(BASE_DIR, "data", "processed", "risk_model.joblib")
 
 class RiskEngine:
     def __init__(self):
-        self.model: Optional[RandomForestRegressor] = None
+        self.model: Optional[GradientBoostingRegressor] = None
         self.feature_cols = [
             'lanes', 'speed_limit_kph', 'junction_density_per_km',
             'crossing_count', 'bus_stop_count', 'lighting_is_verified_yes',
-            'station_total_cases', 'station_fatal_cases'
+            'station_total_cases', 'station_fatal_cases',
+            'station_fatality_ratio', 'night_speed_index',
+            'crossing_deficit', 'junction_transit_conflict'
         ]
         self.feature_importances: Dict[str, float] = {}
         self.cv_metrics: Dict[str, float] = {}
@@ -62,16 +64,34 @@ class RiskEngine:
         raw_target = macro * infra * night_mult
         target = (raw_target - raw_target.min()) / (raw_target.max() - raw_target.min() + 1e-5)
 
-        # Build feature matrix
+        # Build feature matrix with domain-specific night risk interactions
+        lanes = df['lanes'].fillna(2.0).astype(float)
+        speed = df['speed_limit_kph'].fillna(50.0).astype(float)
+        junc = df['junction_density_per_km'].astype(float)
+        cross = df['crossing_count'].astype(float)
+        bus = df['bus_stop_count'].astype(float)
+        lit = (df['street_lighting'] == 'yes').astype(float)
+        st_tot = df['btp_station_total_cases_2023'].astype(float)
+        st_fat = df['btp_station_fatal_cases_2023'].astype(float)
+
+        st_fat_ratio = st_fat / np.maximum(1.0, st_tot)
+        night_speed = speed * (1.0 - lit)
+        cross_deficit = np.maximum(0.0, bus - cross)
+        junc_transit = junc * (bus + 1.0)
+
         X = pd.DataFrame({
-            'lanes': df['lanes'].fillna(2.0).astype(float),
-            'speed_limit_kph': df['speed_limit_kph'].fillna(50.0).astype(float),
-            'junction_density_per_km': df['junction_density_per_km'].astype(float),
-            'crossing_count': df['crossing_count'].astype(float),
-            'bus_stop_count': df['bus_stop_count'].astype(float),
-            'lighting_is_verified_yes': (df['street_lighting'] == 'yes').astype(float),
-            'station_total_cases': df['btp_station_total_cases_2023'].astype(float),
-            'station_fatal_cases': df['btp_station_fatal_cases_2023'].astype(float)
+            'lanes': lanes,
+            'speed_limit_kph': speed,
+            'junction_density_per_km': junc,
+            'crossing_count': cross,
+            'bus_stop_count': bus,
+            'lighting_is_verified_yes': lit,
+            'station_total_cases': st_tot,
+            'station_fatal_cases': st_fat,
+            'station_fatality_ratio': st_fat_ratio,
+            'night_speed_index': night_speed,
+            'crossing_deficit': cross_deficit,
+            'junction_transit_conflict': junc_transit
         })
         return X, target
 
@@ -84,23 +104,28 @@ class RiskEngine:
         X, y = self._compute_hybrid_target(df)
 
         if os.path.exists(MODEL_PATH):
-            saved = joblib.load(MODEL_PATH)
-            self.model = saved['model']
-            self.cv_metrics = saved['cv_metrics']
-            self.feature_importances = saved['feature_importances']
-        else:
-            rf = RandomForestRegressor(n_estimators=100, max_depth=6, random_state=42)
-            cv_scores = cross_val_score(rf, X, y, cv=5, scoring='r2')
-            rf.fit(X, y)
+            try:
+                saved = joblib.load(MODEL_PATH)
+                if isinstance(saved.get('model'), GradientBoostingRegressor) and len(saved.get('feature_importances', {})) == 12:
+                    self.model = saved['model']
+                    self.cv_metrics = saved['cv_metrics']
+                    self.feature_importances = saved['feature_importances']
+            except Exception:
+                self.model = None
+
+        if self.model is None:
+            gbr = GradientBoostingRegressor(n_estimators=150, max_depth=4, learning_rate=0.08, random_state=42)
+            cv_scores = cross_val_score(gbr, X, y, cv=5, scoring='r2')
+            gbr.fit(X, y)
             
-            self.model = rf
+            self.model = gbr
             self.cv_metrics = {
                 "mean_cv_r2": float(round(cv_scores.mean(), 3)),
                 "fold_r2_scores": [float(round(s, 3)) for s in cv_scores]
             }
             self.feature_importances = {
                 col: float(round(imp, 4))
-                for col, imp in zip(self.feature_cols, rf.feature_importances_)
+                for col, imp in zip(self.feature_cols, gbr.feature_importances_)
             }
             joblib.dump({
                 'model': self.model,
@@ -154,15 +179,33 @@ class RiskEngine:
 
     def predict_features(self, feature_row: Dict[str, Any]) -> Tuple[float, float, str]:
         """Predicts (risk_score, safety_score, risk_tier) from a single feature dictionary."""
+        lanes = float(feature_row.get('lanes') or 2.0)
+        speed = float(feature_row.get('speed_limit_kph') or 50.0)
+        junc = float(feature_row.get('junction_density_per_km') or 0.0)
+        cross = float(feature_row.get('crossing_count') or 0.0)
+        bus = float(feature_row.get('bus_stop_count') or 0.0)
+        lit = 1.0 if feature_row.get('street_lighting') == 'yes' else 0.0
+        st_tot = float(feature_row.get('btp_station_total_cases_2023') or 100.0)
+        st_fat = float(feature_row.get('btp_station_fatal_cases_2023') or 20.0)
+
+        st_fat_ratio = st_fat / max(1.0, st_tot)
+        night_speed = speed * (1.0 - lit)
+        cross_deficit = max(0.0, bus - cross)
+        junc_transit = junc * (bus + 1.0)
+
         x_vec = pd.DataFrame([{
-            'lanes': float(feature_row.get('lanes') or 2.0),
-            'speed_limit_kph': float(feature_row.get('speed_limit_kph') or 50.0),
-            'junction_density_per_km': float(feature_row.get('junction_density_per_km') or 0.0),
-            'crossing_count': float(feature_row.get('crossing_count') or 0.0),
-            'bus_stop_count': float(feature_row.get('bus_stop_count') or 0.0),
-            'lighting_is_verified_yes': 1.0 if feature_row.get('street_lighting') == 'yes' else 0.0,
-            'station_total_cases': float(feature_row.get('btp_station_total_cases_2023') or 100.0),
-            'station_fatal_cases': float(feature_row.get('btp_station_fatal_cases_2023') or 20.0)
+            'lanes': lanes,
+            'speed_limit_kph': speed,
+            'junction_density_per_km': junc,
+            'crossing_count': cross,
+            'bus_stop_count': bus,
+            'lighting_is_verified_yes': lit,
+            'station_total_cases': st_tot,
+            'station_fatal_cases': st_fat,
+            'station_fatality_ratio': st_fat_ratio,
+            'night_speed_index': night_speed,
+            'crossing_deficit': cross_deficit,
+            'junction_transit_conflict': junc_transit
         }])
         
         pred_risk = float(np.clip(self.model.predict(x_vec)[0], 0.0, 1.0))
