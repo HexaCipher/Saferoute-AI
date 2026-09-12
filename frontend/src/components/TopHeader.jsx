@@ -5,17 +5,27 @@ import {
   ChevronDown, 
   Sun, 
   Target, 
-  Command
+  Command,
+  Menu
 } from 'lucide-react';
 
-export default function TopHeader({ onOpenSearch }) {
+export default function TopHeader({ onOpenSearch, onToggleMobileMenu }) {
   return (
     <header className="top-header">
-      {/* 1. Brand Logo */}
+      {/* Left: Mobile Menu Button + Brand Logo */}
       <div className="header-brand">
+        <button 
+          className="mobile-menu-trigger"
+          onClick={onToggleMobileMenu}
+          title="Toggle Navigation Menu"
+          aria-label="Toggle Menu"
+        >
+          <Menu size={20} />
+        </button>
+
         <div className="brand-logo-mark">
           {/* Stylized Road Ribbon SVG matching ui_dashboard.png */}
-          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M5 27L16 4L27 27H20L16 16L12 27H5Z" fill="#F59E0B" />
             <path d="M14 27L16 20L18 27H14Z" fill="#FFFFFF" />
           </svg>
@@ -26,43 +36,43 @@ export default function TopHeader({ onOpenSearch }) {
         </div>
       </div>
 
-      {/* 2. Global Quick Search with ⌘K */}
+      {/* Center: Global Quick Search with ⌘K */}
       <div className="header-search-container" onClick={onOpenSearch}>
-        <Search size={16} className="search-icon" />
+        <Search size={15} className="search-icon" />
         <input 
           type="text" 
-          placeholder="Search road, junction, or area..." 
+          placeholder="Search road, junction..." 
           readOnly 
           className="search-input-fake"
         />
         <div className="kbd-badge">
-          <Command size={11} />
+          <Command size={10} />
           <span>K</span>
         </div>
       </div>
 
-      {/* 3. Right Status Controls */}
+      {/* Right: Status Controls */}
       <div className="header-right-controls">
         {/* City Selector */}
         <div className="city-selector-chip">
-          <MapPin size={14} className="pin-icon" />
+          <MapPin size={13} className="pin-icon" />
           <span className="city-name">Bengaluru</span>
-          <ChevronDown size={14} className="chevron" />
+          <ChevronDown size={13} className="chevron" />
         </div>
 
         {/* Live Weather & Time */}
         <div className="weather-time-chip">
-          <Sun size={15} className="weather-icon text-amber" />
+          <Sun size={14} className="weather-icon text-amber" />
           <span className="weather-temp">24°C</span>
-          <span className="chip-sep">•</span>
-          <span className="live-date">Mon, 15 Oct 2024</span>
-          <span className="live-time">6:24 PM</span>
+          <span className="chip-sep desktop-only">•</span>
+          <span className="live-date desktop-only">Mon, 15 Oct 2024</span>
+          <span className="live-time tablet-desktop-only">6:24 PM</span>
         </div>
 
         {/* Vision Zero 2030 Initiative Badge */}
-        <div className="vision-zero-badge">
+        <div className="vision-zero-badge desktop-only">
           <div className="target-icon-wrap">
-            <Target size={14} className="target-icon" />
+            <Target size={13} className="target-icon" />
           </div>
           <div className="vision-badge-text">
             <span className="vision-title">Vision Zero 2030</span>
@@ -73,8 +83,8 @@ export default function TopHeader({ onOpenSearch }) {
         {/* User / Team Profile */}
         <div className="user-profile-chip">
           <div className="avatar-circle">A</div>
-          <span className="team-name">Team Null Pointers</span>
-          <ChevronDown size={14} className="chevron" />
+          <span className="team-name desktop-only">Team Null Pointers</span>
+          <ChevronDown size={13} className="chevron desktop-only" />
         </div>
       </div>
     </header>

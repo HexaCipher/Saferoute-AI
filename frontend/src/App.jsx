@@ -9,15 +9,39 @@ import FooterBar from './components/FooterBar';
 import SearchModal from './components/SearchModal';
 import SimulatorModal from './components/SimulatorModal';
 import { apiService } from './services/api';
+import { Map, ListFilter, BarChart3 } from 'lucide-react';
 
 export default function App() {
   const [corridors, setCorridors] = useState([]);
   const [metrics, setMetrics] = useState(null);
   const [selectedCorridor, setSelectedCorridor] = useState(null);
   const [activeNav, setActiveNav] = useState('overview');
+  
+  // Responsive / Collapsible Layout States
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [corridorListCollapsed, setCorridorListCollapsed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [mobileActiveView, setMobileActiveView] = useState('map'); // 'map' | 'corridors' | 'inspector'
+
   const [searchOpen, setSearchOpen] = useState(false);
   const [simulatorOpen, setSimulatorOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Auto-adapt on smaller screen sizes
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1200 && !sidebarCollapsed) {
+        setSidebarCollapsed(true);
+      }
+      if (window.innerWidth < 1080 && !corridorListCollapsed) {
+        setCorridorListCollapsed(true);
+      }
+    };
+    
+    handleResize(); // Initial check
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Load Initial Datasets
   useEffect(() => {
@@ -31,7 +55,6 @@ export default function App() {
         setCorridors(corridorsData);
         setMetrics(metricsData);
         if (corridorsData.length > 0) {
-          // Default selection to Silk Board Junction (highest risk blackspot)
           setSelectedCorridor(corridorsData[0]);
         }
       } catch (err) {
@@ -46,22 +69,45 @@ export default function App() {
 
   const handleSelectCorridor = (corridor) => {
     setSelectedCorridor(corridor);
+    // On mobile, automatically show inspector when a corridor is picked
+    if (window.innerWidth < 900) {
+      setMobileActiveView('inspector');
+    }
   };
 
   return (
     <div className="roadsafe-app-root">
+      {/* Mobile Drawer Backdrop */}
+      {mobileNavOpen && (
+        <div 
+          className="mobile-nav-backdrop" 
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
+
       {/* 1. Global Left Sidebar Navigation */}
-      <SidebarNav 
-        activeNav={activeNav}
-        onSelectNav={setActiveNav}
-        onOpenSimulator={() => setSimulatorOpen(true)}
-      />
+      <div className={`sidebar-wrapper ${mobileNavOpen ? 'mobile-open' : ''}`}>
+        <SidebarNav 
+          activeNav={activeNav}
+          onSelectNav={(id) => {
+            setActiveNav(id);
+            setMobileNavOpen(false);
+          }}
+          onOpenSimulator={() => {
+            setSimulatorOpen(true);
+            setMobileNavOpen(false);
+          }}
+          isCollapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        />
+      </div>
 
       {/* 2. Main Content Canvas */}
       <div className="main-viewport-container">
         {/* Top Header Bar */}
         <TopHeader 
           onOpenSearch={() => setSearchOpen(true)}
+          onToggleMobileMenu={() => setMobileNavOpen(!mobileNavOpen)}
         />
 
         {/* Scrollable Dashboard Body */}
@@ -69,17 +115,46 @@ export default function App() {
           {/* Subheader & 5 KPI Metrics Strip */}
           <KpiMetricsRow metrics={metrics} />
 
+          {/* Mobile View Switcher Tabs (Only visible on screens < 900px) */}
+          <div className="mobile-view-switcher">
+            <button 
+              className={`switcher-pill ${mobileActiveView === 'corridors' ? 'active' : ''}`}
+              onClick={() => setMobileActiveView('corridors')}
+            >
+              <ListFilter size={14} />
+              <span>Corridors ({corridors.length})</span>
+            </button>
+            <button 
+              className={`switcher-pill ${mobileActiveView === 'map' ? 'active' : ''}`}
+              onClick={() => setMobileActiveView('map')}
+            >
+              <Map size={14} />
+              <span>Satellite Map</span>
+            </button>
+            <button 
+              className={`switcher-pill ${mobileActiveView === 'inspector' ? 'active' : ''}`}
+              onClick={() => setMobileActiveView('inspector')}
+            >
+              <BarChart3 size={14} />
+              <span>Intelligence</span>
+            </button>
+          </div>
+
           {/* 3-Column Core Command Center Grid */}
-          <main className="command-grid-layout">
+          <main className={`command-grid-layout ${corridorListCollapsed ? 'corridors-collapsed' : ''} mobile-view-${mobileActiveView}`}>
             {/* Column 1: Road Corridors List */}
-            <CorridorList 
-              corridors={corridors}
-              selectedCorridor={selectedCorridor}
-              onSelectCorridor={handleSelectCorridor}
-            />
+            <div className="grid-col-corridors">
+              <CorridorList 
+                corridors={corridors}
+                selectedCorridor={selectedCorridor}
+                onSelectCorridor={handleSelectCorridor}
+                isCollapsed={corridorListCollapsed}
+                onToggleCollapse={() => setCorridorListCollapsed(!corridorListCollapsed)}
+              />
+            </div>
 
             {/* Column 2: Center Realistic Satellite Map */}
-            <section className="map-view-column">
+            <section className="grid-col-map map-view-column">
               <SatelliteRiskMap 
                 corridors={corridors}
                 selectedCorridor={selectedCorridor}
@@ -88,7 +163,7 @@ export default function App() {
             </section>
 
             {/* Column 3: Segment Intelligence Drawer */}
-            <aside className="inspector-view-column">
+            <aside className="grid-col-inspector inspector-view-column">
               <InspectorDrawer 
                 corridor={selectedCorridor}
                 onOpenSimulator={() => setSimulatorOpen(true)}

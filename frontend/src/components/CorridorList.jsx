@@ -4,13 +4,18 @@ import {
   SlidersHorizontal, 
   Car, 
   Skull, 
-  Footprints 
+  Footprints,
+  ChevronLeft,
+  ChevronRight,
+  Route
 } from 'lucide-react';
 
 export default function CorridorList({ 
   corridors, 
   selectedCorridor, 
-  onSelectCorridor 
+  onSelectCorridor,
+  isCollapsed = false,
+  onToggleCollapse
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState('ALL');
@@ -32,6 +37,44 @@ export default function CorridorList({
   const highCount = corridors.filter((c) => c.risk_tier === 'High').length;
   const mediumCount = corridors.filter((c) => c.risk_tier === 'Medium').length;
 
+  if (isCollapsed) {
+    return (
+      <aside className="corridors-sidebar-panel collapsed">
+        <button 
+          className="corridor-collapse-toggle-btn"
+          onClick={onToggleCollapse}
+          title="Expand Road Corridors List"
+        >
+          <ChevronRight size={16} />
+        </button>
+
+        <div className="collapsed-corridors-spine">
+          <Route size={16} className="text-muted" />
+          <div className="vertical-spine-text">
+            <span>{corridors.length} Corridors</span>
+          </div>
+
+          <div className="mini-pills-stack">
+            {corridors.slice(0, 6).map(c => {
+              const isSelected = selectedCorridor && selectedCorridor.id === c.id;
+              const isCritical = c.risk_tier === 'Critical';
+              return (
+                <button
+                  key={c.id}
+                  className={`mini-score-dot ${isCritical ? 'bg-red' : 'bg-orange'} ${isSelected ? 'is-selected' : ''}`}
+                  onClick={() => onSelectCorridor(c)}
+                  title={`${c.name} (${c.risk_score}/100)`}
+                >
+                  {c.risk_score}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </aside>
+    );
+  }
+
   return (
     <aside className="corridors-sidebar-panel">
       {/* Panel Header */}
@@ -41,9 +84,18 @@ export default function CorridorList({
             <h2 className="panel-title">Road Corridors</h2>
             <span className="corridors-count-chip">{corridors.length}</span>
           </div>
-          <button className="filter-sliders-btn" title="Filter Settings">
-            <SlidersHorizontal size={15} />
-          </button>
+          <div className="header-actions-group">
+            <button className="filter-sliders-btn" title="Filter Settings">
+              <SlidersHorizontal size={14} />
+            </button>
+            <button 
+              className="corridor-collapse-btn" 
+              onClick={onToggleCollapse}
+              title="Collapse list to maximize map"
+            >
+              <ChevronLeft size={16} />
+            </button>
+          </div>
         </div>
         <p className="panel-subtitle">Explore and analyse high-risk corridors</p>
 
@@ -111,7 +163,6 @@ export default function CorridorList({
                   alt={item.name} 
                   className="corridor-thumb-img"
                   onError={(e) => {
-                    // Fallback to placeholder if offline
                     e.target.src = 'https://images.unsplash.com/photo-1545459720-aac8509eb02c?auto=format&fit=crop&w=200&q=80';
                   }}
                 />
