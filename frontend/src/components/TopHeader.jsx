@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   MapPin, 
@@ -18,6 +18,25 @@ export default function TopHeader({
   onRetryBackend
 }) {
   const isHealthy = backendHealth?.isHealthy;
+
+  const [currentDateTime, setCurrentDateTime] = useState(() => {
+    const now = new Date();
+    return {
+      date: now.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }),
+      time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+    };
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      setCurrentDateTime({
+        date: now.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }),
+        time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+      });
+    }, 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <header className="top-header">
@@ -93,8 +112,8 @@ export default function TopHeader({
           <Sun size={14} className="weather-icon text-amber" />
           <span className="weather-temp">24°C</span>
           <span className="chip-sep">•</span>
-          <span className="live-date">Mon, 15 Oct 2024</span>
-          <span className="live-time tablet-desktop-only">6:24 PM</span>
+          <span className="live-date">{currentDateTime.date}</span>
+          <span className="live-time tablet-desktop-only">{currentDateTime.time}</span>
         </div>
 
         {/* Vision Zero 2030 Initiative Badge */}
