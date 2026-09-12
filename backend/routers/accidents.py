@@ -19,6 +19,7 @@ def create_accident(accident: AccidentCreate, db: Session = Depends(get_db)):
     return db_accident
 
 
+@router.get("", response_model=List[AccidentResponse])
 @router.get("/", response_model=List[AccidentResponse])
 def get_accidents(
     skip: int = 0,

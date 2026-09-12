@@ -68,21 +68,42 @@ async def health_check():
 
 
 # Mount Built Frontend if available (Enables 1-Click Single-Container / Single-URL Deployment)
+from fastapi import Request
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
 frontend_dist_dir = Path(__file__).resolve().parent.parent / "frontend" / "dist"
-if frontend_dist_dir.exists():
-    app.mount("/", StaticFiles(directory=str(frontend_dist_dir), html=True), name="frontend")
-else:
-    @app.get("/")
-    async def root():
-        total_segments = len(risk_engine.df_segments) if risk_engine.df_segments is not None else 0
-        return {
-            "platform": "SafeRoute AI — Bengaluru NightRide",
-            "version": "1.0.0",
-            "status": "operational",
-            "total_analyzed_segments": total_segments,
-            "docs_url": "/docs",
-            "api_contract": "/api/v1"
-        }
+
+if (frontend_dist_dir / "assets").exists():
+    app.mount("/assets", StaticFiles(directory=str(frontend_dist_dir / "assets")), name="assets")
+
+
+@app.get("/favicon.svg")
+async def favicon():
+    fav = frontend_dist_dir / "favicon.svg"
+    if fav.exists():
+        return FileResponse(str(fav))
+    return {"error": "Favicon not found"}
+
+
+@app.get("/api")
+@app.get("/api/v1")
+@app.get("/")
+async def root(request: Request):
+    accept_header = request.headers.get("accept", "").lower()
+    # If a web browser is requesting the page (Accept contains text/html), serve the React SPA
+    if "text/html" in accept_header and (frontend_dist_dir / "index.html").exists():
+        return FileResponse(str(frontend_dist_dir / "index.html"))
+    
+    # Otherwise return the canonical JSON API contract
+    total_segments = len(risk_engine.df_segments) if risk_engine.df_segments is not None else 0
+    return {
+        "platform": "SafeRoute AI — Bengaluru NightRide",
+        "version": "1.0.0",
+        "status": "operational",
+        "total_analyzed_segments": total_segments,
+        "docs_url": "/docs",
+        "api_contract": "/api/v1"
+    }
+
