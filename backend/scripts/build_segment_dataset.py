@@ -27,12 +27,7 @@ from shapely import force_2d
 import pyproj
 import osmnx as ox
 
-# Configure OSMnx settings
-ox.settings.use_cache = True
-ox.settings.log_console = False
-
-# Projections
-# EPSG:4326 (WGS84 lat/lon) -> EPSG:32643 (UTM 43N meters for Bengaluru)
+# Projections: EPSG:4326 (WGS84 lat/lon) -> EPSG:32643 (UTM 43N meters for Bengaluru)
 wgs84_to_utm = pyproj.Transformer.from_crs("EPSG:4326", "EPSG:32643", always_xy=True).transform
 utm_to_wgs84 = pyproj.Transformer.from_crs("EPSG:32643", "EPSG:4326", always_xy=True).transform
 
@@ -46,38 +41,34 @@ os.makedirs(RAW_OSM_DIR, exist_ok=True)
 os.makedirs(PROCESSED_DIR, exist_ok=True)
 
 # Corridors Configuration for Bengaluru MVP
-# Bounding box format: (min_lon, min_lat, max_lon, max_lat)
 CORRIDORS_CONFIG = [
     {
         "id": "ORR",
         "name": "Outer Ring Road (Silk Board to Hebbal)",
-        "bbox": (77.61, 12.90, 77.71, 13.04),
+        "graphml": os.path.join(RAW_OSM_DIR, "orr_drive.graphml"),
         "name_keywords": [
             "outer ring road", "ring road", "sarjapur", "marathahalli",
             "bellandur", "kadubeesanahalli", "mahadevapura", "kr puram",
             "kalyan nagar", "ramamurthy nagar", "hennur", "nagawara", "hebbal"
-        ],
-        "highway_filter": '["highway"~"motorway|trunk|primary|secondary"]'
+        ]
     },
     {
         "id": "HOSUR",
         "name": "Hosur Road / Electronic City (NH 44)",
-        "bbox": (77.61, 12.83, 77.67, 12.93),
+        "graphml": os.path.join(RAW_OSM_DIR, "hosur_drive.graphml"),
         "name_keywords": [
             "hosur road", "hosur", "nh 44", "nh44", "electronic city",
             "bommanahalli", "singasandra", "kudlu", "silk board"
-        ],
-        "highway_filter": '["highway"~"motorway|trunk|primary|secondary"]'
+        ]
     },
     {
         "id": "OMR_WHITEFIELD",
         "name": "Old Madras Road / Whitefield Corridor",
-        "bbox": (77.64, 12.95, 77.76, 13.02),
+        "graphml": os.path.join(RAW_OSM_DIR, "omr_drive.graphml"),
         "name_keywords": [
             "old madras road", "swamy vivekananda", "omr", "whitefield",
             "itpl", "varthur", "hoodi", "hal old airport road", "airport road"
-        ],
-        "highway_filter": '["highway"~"motorway|trunk|primary|secondary"]'
+        ]
     }
 ]
 
@@ -166,7 +157,7 @@ def load_and_clean_btp_data() -> gpd.GeoDataFrame:
     clean23['Station'] = clean23['Station'].str.strip()
     clean23['Traffic_PS'] = clean23['Station'].map(BTP_STATION_MAPPING)
     
-    # Aggregate multiple stations mapped to the same historical jurisdiction (e.g. Bellandur + HSR)
+    # Aggregate multiple stations mapped to same historical jurisdiction
     agg_23 = clean23.groupby('Traffic_PS').agg({
         '2023 - Fatal Cases': 'sum',
         '2023 - Killed People': 'sum',
@@ -212,49 +203,6 @@ def load_and_clean_btp_data() -> gpd.GeoDataFrame:
     
     print(f"Loaded {len(merged)} BTP jurisdiction polygons with full crash statistics.")
     return merged
-
-
-def get_corridor_graph(corridor: Dict[str, Any]) -> Tuple[ox.graph_from_bbox, gpd.GeoDataFrame]:
-    """Retrieves or loads cached OSM road graph and POIs for a corridor."""
-    cid = corridor['id']
-    graph_cache = os.path.join(RAW_OSM_DIR, f"{cid.lower()}_drive.graphml")
-    poi_cache = os.path.join(RAW_OSM_DIR, f"{cid.lower()}_pois.geojson")
-    
-    # 1. Graph extraction
-    if os.path.exists(graph_cache):
-        print(f"  Loading cached graph for {cid}...")
-        G = ox.load_graphml(graph_cache)
-    else:
-        print(f"  Downloading OSM road network for {cid} ({corridor['name']})...")
-        t0 = time.time()
-        G = ox.graph_from_bbox(
-            corridor['bbox'],
-            network_type='drive',
-            custom_filter=corridor['highway_filter']
-        )
-        ox.save_graphml(G, graph_cache)
-        print(f"  Saved graph ({len(G.nodes)} nodes, {len(G.edges)} edges) in {time.time()-t0:.1f}s.")
-        
-    # 2. POIs extraction (crossings and bus stops)
-    if os.path.exists(poi_cache):
-        print(f"  Loading cached POIs for {cid}...")
-        pois_gdf = gpd.read_file(poi_cache)
-    else:
-        print(f"  Downloading POIs (crossings, bus stops) for {cid}...")
-        try:
-            pois_gdf = ox.features_from_bbox(
-                corridor['bbox'],
-                tags={'highway': ['crossing', 'bus_stop']}
-            )
-            # Filter to points only
-            pois_gdf = pois_gdf[pois_gdf.geometry.type == 'Point'][['highway', 'geometry']].copy()
-            pois_gdf.to_file(poi_cache, driver='GeoJSON')
-            print(f"  Saved {len(pois_gdf)} POIs for {cid}.")
-        except Exception as e:
-            print(f"  Warning: POI download failed for {cid} ({e}). Using empty POI layer.")
-            pois_gdf = gpd.GeoDataFrame(columns=['highway', 'geometry'], crs='EPSG:4326')
-            
-    return G, pois_gdf
 
 
 def matches_corridor(name_val: Any, keywords: List[str]) -> bool:
@@ -305,11 +253,14 @@ def partition_edge_to_segments(
     target_length_m: float = 500.0
 ) -> List[Dict[str, Any]]:
     """Partitions a road edge LineString into ~500m segments using metric projection."""
-    # Project to UTM 43N meters
     line_utm = transform(wgs84_to_utm, line_wgs)
     edge_length_m = line_utm.length
     
-    # If edge is very short (< 150m), keep as single unit to avoid zero-length slivers
+    # Filter out micro-slivers under 50m (connector stubs / turn slips)
+    if edge_length_m < 50.0:
+        return []
+        
+    # If edge is under 600m, keep as single unit to avoid zero-length slivers
     if edge_length_m < 600.0:
         sub_wgs = line_wgs
         coords = list(sub_wgs.coords)
@@ -332,7 +283,6 @@ def partition_edge_to_segments(
     sub_idx = 1
     while curr < edge_length_m:
         end = min(curr + target_length_m, edge_length_m)
-        # If remaining tail is small (< 150m), extend current slice to the end
         if (edge_length_m - end) < 150.0:
             end = edge_length_m
             
@@ -376,13 +326,11 @@ def associate_btp_jurisdiction(
         poly = row.geometry
         if segment_geom.intersects(poly):
             inter = segment_geom.intersection(poly)
-            # inter can be LineString, MultiLineString, etc.
             inter_len = inter.length
             ratio = inter_len / seg_len
             overlaps.append((row, ratio))
             
     if overlaps:
-        # Sort by overlap ratio descending
         overlaps.sort(key=lambda x: x[1], reverse=True)
         best_row, best_ratio = overlaps[0]
         stats = {
@@ -433,7 +381,19 @@ def build_pipeline():
     # Step 1: Load BTP data
     btp_gdf = load_and_clean_btp_data()
     
-    # Step 2: Process Corridors
+    # Step 2: Load POIs (crossings and bus stops) from cached POI GeoJSON
+    poi_path = os.path.join(RAW_OSM_DIR, "bengaluru_pois.geojson")
+    if os.path.exists(poi_path):
+        pois_gdf = gpd.read_file(poi_path)
+        print(f"Loaded {len(pois_gdf)} authentic POIs from {poi_path}.")
+    else:
+        pois_gdf = gpd.GeoDataFrame(columns=['highway', 'geometry'], crs='EPSG:4326')
+        print("Warning: POI file not found, proceeding with empty POIs.")
+        
+    pois_crossings = pois_gdf[pois_gdf['highway'] == 'crossing'] if not pois_gdf.empty else gpd.GeoDataFrame()
+    pois_bus_stops = pois_gdf[pois_gdf['highway'] == 'bus_stop'] if not pois_gdf.empty else gpd.GeoDataFrame()
+    
+    # Step 3: Process Corridors
     all_raw_segments = []
     
     for corridor in CORRIDORS_CONFIG:
@@ -441,27 +401,24 @@ def build_pipeline():
         cname = corridor['name']
         print(f"\n--- [Step 2] Processing Corridor: {cname} ---")
         
-        G, pois_gdf = get_corridor_graph(corridor)
+        graphml_path = corridor['graphml']
+        if not os.path.exists(graphml_path):
+            raise FileNotFoundError(f"Missing road graph: {graphml_path}")
+            
+        G = ox.load_graphml(graphml_path)
         edges = ox.graph_to_gdfs(G, nodes=False)
-        nodes = ox.graph_to_gdfs(G, edges=False)
-        
-        # Calculate node degrees for junction counting
         node_degrees = dict(G.degree())
         
         # Filter corridor edges by name or major arterial types
         is_matched = edges['name'].apply(lambda n: matches_corridor(n, corridor['name_keywords']))
         corridor_edges = edges[is_matched].copy()
         
-        # If road name matching yielded few edges (e.g. some links unlabelled), include major trunk/primary edges
+        # Ensure comprehensive corridor coverage (trunk/motorway corridors)
         if len(corridor_edges) < 20:
             trunk_edges = edges[edges['highway'].isin(['trunk', 'motorway', 'primary'])].copy()
             corridor_edges = pd.concat([corridor_edges, trunk_edges]).drop_duplicates()
             
         print(f"Extracted {len(corridor_edges)} raw road ways for {cid}.")
-        
-        # POI metric preparation (buffer in UTM)
-        pois_crossings = pois_gdf[pois_gdf['highway'] == 'crossing'] if not pois_gdf.empty else gpd.GeoDataFrame()
-        pois_bus_stops = pois_gdf[pois_gdf['highway'] == 'bus_stop'] if not pois_gdf.empty else gpd.GeoDataFrame()
         
         # Partition edges into ~500m segments
         base_edge_counter = 1
@@ -570,7 +527,7 @@ def build_pipeline():
     # Convert to GeoDataFrame
     final_gdf = gpd.GeoDataFrame(all_raw_segments, crs="EPSG:4326")
     
-    # Deduplicate by segment_id if any overlap occurred
+    # Deduplicate by segment_id
     final_gdf = final_gdf.drop_duplicates(subset=['segment_id']).reset_index(drop=True)
     
     # Add pipeline metadata
@@ -586,7 +543,7 @@ def build_pipeline():
         "crs": "EPSG:4326 (WGS84)"
     }
     
-    # Step 3: Export Datasets
+    # Step 4: Export Datasets
     geojson_path = os.path.join(PROCESSED_DIR, "bengaluru_500m_segments.geojson")
     parquet_path = os.path.join(PROCESSED_DIR, "bengaluru_500m_segments.parquet")
     meta_path = os.path.join(PROCESSED_DIR, "dataset_metadata.json")
@@ -595,18 +552,17 @@ def build_pipeline():
     final_gdf.to_file(geojson_path, driver="GeoJSON")
     print(f"Exported GeoJSON -> {geojson_path} ({os.path.getsize(geojson_path)} bytes)")
     
-    # Parquet export
     try:
         final_gdf.to_parquet(parquet_path)
         print(f"Exported Parquet -> {parquet_path} ({os.path.getsize(parquet_path)} bytes)")
     except Exception as e:
-        print(f"Warning: Parquet export note ({e})")
+        print(f"Warning: Parquet export ({e})")
         
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2)
     print(f"Exported Metadata -> {meta_path}")
     
-    # Step 4: Run Validation Checks
+    # Step 5: Run Validation Checks
     print("\n=================================================================")
     print("PIPELINE VALIDATION REPORT")
     print("=================================================================")
@@ -669,7 +625,7 @@ def build_pipeline():
         'junction_count', 'crossing_count', 'bus_stop_count', 'btp_station',
         'btp_station_total_cases_2023', 'btp_station_fatal_cases_2023'
     ]
-    sample_df = final_gdf[sample_cols].head(4)
+    sample_df = final_gdf[sample_cols].head(5)
     print(sample_df.to_string())
     
     print(f"\nPipeline finished in {time.time()-start_time:.1f} seconds.")
