@@ -1,0 +1,11 @@
+{
+  "pipeline_version": "1.0.0",
+  "processing_timestamp": "2026-09-12T13:28:22.948912+00:00",
+  "osm_extraction_date": "2026-09-12",
+  "source_btp_2023": "Bengaluru Traffic Police / OpenCity (48 Stations, 4974 cases)",
+  "source_btp_2020_2022": "Bengaluru Traffic Police / OpenCity (45 Stations)",
+  "source_btp_jurisdictions": "KGIS / BTP Pre-2022 (45 Polygons)",
+  "source_osm": "OpenStreetMap contributors via OSMnx 2.1.1",
+  "segment_target_length_m": 500.0,
+  "crs": "EPSG:4326 (WGS84)"
+}
