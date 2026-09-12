@@ -15,6 +15,7 @@ geopandas
 shapely
 pyproj
 osmnx
+pyarrow  # required by GeoPandas for Parquet I/O (bengaluru_500m_segments.parquet)
 
 # Utilities
 python-multipart==0.0.6
