@@ -38,47 +38,22 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS for Frontend (Vite, React, Next.js)
-ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:5175",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:5174",
-    "http://127.0.0.1:5175",
-    "http://localhost:8000"
-]
-
+# Configure CORS for Frontend (Vite, React, Vercel, Render, Netlify, Cloudflare)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Mount Routers
+# Mount API Routers
 app.include_router(segments.router, prefix="/api/v1/segments", tags=["segments"])
 app.include_router(simulator.router, prefix="/api/v1/simulate", tags=["simulation"])
 app.include_router(recommendations.router, prefix="/api/v1/recommendations", tags=["recommendations"])
 app.include_router(actions.router, prefix="/api/v1/actions", tags=["actions"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
 app.include_router(accidents.router, prefix="/api/v1/accidents", tags=["accidents"])
-
-
-@app.get("/")
-async def root():
-    total_segments = len(risk_engine.df_segments) if risk_engine.df_segments is not None else 0
-    return {
-        "platform": "SafeRoute AI — Bengaluru NightRide",
-        "version": "1.0.0",
-        "status": "operational",
-        "total_analyzed_segments": total_segments,
-        "docs_url": "/docs",
-        "api_contract": "/api/v1"
-    }
 
 
 @app.get("/health")
@@ -90,3 +65,24 @@ async def health_check():
         "dataset_loaded": total_segments > 0,
         "total_segments": total_segments
     }
+
+
+# Mount Built Frontend if available (Enables 1-Click Single-Container / Single-URL Deployment)
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
+frontend_dist_dir = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+if frontend_dist_dir.exists():
+    app.mount("/", StaticFiles(directory=str(frontend_dist_dir), html=True), name="frontend")
+else:
+    @app.get("/")
+    async def root():
+        total_segments = len(risk_engine.df_segments) if risk_engine.df_segments is not None else 0
+        return {
+            "platform": "SafeRoute AI — Bengaluru NightRide",
+            "version": "1.0.0",
+            "status": "operational",
+            "total_analyzed_segments": total_segments,
+            "docs_url": "/docs",
+            "api_contract": "/api/v1"
+        }

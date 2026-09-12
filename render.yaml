@@ -1,0 +1,15 @@
+# ==============================================================================
+# Render.com Blueprint Configuration (Infrastructure-as-Code)
+# Deploys SafeRoute AI full-stack container on Render
+# ==============================================================================
+services:
+  - type: web
+    name: saferoute-ai
+    env: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8000
