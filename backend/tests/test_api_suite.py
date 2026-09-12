@@ -132,6 +132,62 @@ def test_accidents_backward_compatibility():
     assert isinstance(response.json(), list)
 
 
+def test_saved_simulations():
+    # 1. Get existing saved simulations
+    res = client.get("/api/v1/simulate/saved")
+    assert res.status_code == 200
+    assert isinstance(res.json(), list)
+    
+    # 2. Save a new simulation
+    all_segs = client.get("/api/v1/segments").json()
+    seg_id = all_segs["features"][0]["properties"]["segment_id"]
+    save_payload = {
+        "segment_id": seg_id,
+        "scenario_name": "Test Highway Safety Intervention",
+        "interventions": ["street_lighting_upgrade", "speed_enforcement_camera"],
+        "created_by": "Traffic Police Commissioner"
+    }
+    save_res = client.post("/api/v1/simulate/save", json=save_payload)
+    assert save_res.status_code == 201
+    saved_data = save_res.json()
+    assert saved_data["scenario_name"] == "Test Highway Safety Intervention"
+    assert "score_gain" in saved_data
+
+
+def test_action_tracker():
+    # 1. List actions
+    res = client.get("/api/v1/actions")
+    assert res.status_code == 200
+    actions = res.json()
+    assert len(actions) >= 3
+
+    # 2. Create action
+    new_action = {
+        "segment_id": "BLR_ORR_001_1",
+        "corridor_name": "Outer Ring Road (Silk Board to Hebbal)",
+        "road_name": "Outer Ring Road (Bellandur)",
+        "intervention_type": "street_lighting_upgrade",
+        "intervention_label": "High-Mast Smart LED Lighting Upgrade",
+        "priority_tier": "CRITICAL",
+        "assigned_agency": "BBMP",
+        "allocated_budget_lakhs": 35.0,
+        "notes": "Tender released for nighttime lighting",
+        "target_date": "2026-11-30"
+    }
+    create_res = client.post("/api/v1/actions", json=new_action)
+    assert create_res.status_code == 201
+    created_id = create_res.json()["id"]
+
+    # 3. Patch action status
+    patch_res = client.patch(f"/api/v1/actions/{created_id}", json={"status": "IN_PROGRESS"})
+    assert patch_res.status_code == 200
+    assert patch_res.json()["status"] == "IN_PROGRESS"
+
+    # 4. Delete action
+    del_res = client.delete(f"/api/v1/actions/{created_id}")
+    assert del_res.status_code == 200
+
+
 if __name__ == "__main__":
     tests = [
         test_health_check,
@@ -143,6 +199,8 @@ if __name__ == "__main__":
         test_fix_this_first_recommendations,
         test_analytics_summary,
         test_analytics_csv_export,
+        test_saved_simulations,
+        test_action_tracker,
         test_accidents_backward_compatibility,
     ]
     print("=" * 60)

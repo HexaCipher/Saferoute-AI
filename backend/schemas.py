@@ -232,3 +232,70 @@ class AccidentResponse(AccidentBase):
     class Config:
         from_attributes = True
 
+
+# Persistent Municipal Planning & Action Tracker Schemas
+class SaveSimulationRequest(BaseModel):
+    segment_id: str
+    scenario_name: str
+    interventions: List[str]
+    created_by: Optional[str] = "Municipal Authority"
+
+
+class SavedSimulationResponse(BaseModel):
+    id: int
+    segment_id: str
+    scenario_name: str
+    original_safety_score: float
+    simulated_safety_score: float
+    score_gain: float
+    original_risk_tier: str
+    simulated_risk_tier: str
+    expected_fatality_reduction_pct: float
+    applied_interventions: List[str]
+    created_by: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ActionItemCreate(BaseModel):
+    segment_id: str
+    corridor_name: str
+    road_name: str
+    intervention_type: str
+    intervention_label: str
+    priority_tier: Optional[str] = "CRITICAL"
+    assigned_agency: Optional[str] = "BBMP"
+    allocated_budget_lakhs: Optional[float] = 0.0
+    notes: Optional[str] = None
+    target_date: Optional[str] = None
+
+
+class ActionItemUpdate(BaseModel):
+    status: Optional[str] = None  # PLANNED, IN_PROGRESS, COMPLETED, ON_HOLD
+    assigned_agency: Optional[str] = None
+    allocated_budget_lakhs: Optional[float] = None
+    notes: Optional[str] = None
+    target_date: Optional[str] = None
+
+
+class ActionItemResponse(BaseModel):
+    id: int
+    segment_id: str
+    corridor_name: str
+    road_name: str
+    intervention_type: str
+    intervention_label: str
+    status: str
+    priority_tier: str
+    assigned_agency: str
+    allocated_budget_lakhs: float
+    notes: Optional[str] = None
+    target_date: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+

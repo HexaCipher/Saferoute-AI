@@ -10,7 +10,7 @@ import logging
 
 from backend.config import settings
 from backend.database import engine, Base
-from backend.routers import accidents, segments, simulator, recommendations, analytics
+from backend.routers import accidents, segments, simulator, recommendations, analytics, actions
 from backend.services.risk_engine import risk_engine
 
 logging.basicConfig(level=logging.INFO)
@@ -59,6 +59,7 @@ app.add_middleware(
 app.include_router(segments.router, prefix="/api/v1/segments", tags=["segments"])
 app.include_router(simulator.router, prefix="/api/v1/simulate", tags=["simulation"])
 app.include_router(recommendations.router, prefix="/api/v1/recommendations", tags=["recommendations"])
+app.include_router(actions.router, prefix="/api/v1/actions", tags=["actions"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
 app.include_router(accidents.router, prefix="/api/v1/accidents", tags=["accidents"])
 

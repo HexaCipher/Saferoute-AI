@@ -379,3 +379,118 @@ Exports the entire road safety dataset or filtered subset as a clean, standardiz
   - `Content-Disposition`: `attachment; filename="saferoute_ai_bengaluru_safety_report.csv"`
 - Output columns:
   `segment_id, corridor_id, corridor_name, road_name, road_type, segment_length_m, safety_score, risk_tier, risk_score, night_risk_multiplier, primary_vulnerable_group, btp_station, street_lighting, lanes, speed_limit_kph, crossing_count, bus_stop_count, junction_count, confidence_level`
+
+---
+
+## 7. Saved Simulations (Scenario Planner)
+
+### `POST /api/v1/simulate/save`
+Saves an evaluated What-If simulation into the persistent municipal database with a descriptive scenario name.
+
+**Request Body**:
+```json
+{
+  "segment_id": "BLR_ORR_006_2",
+  "scenario_name": "BBMP FY26 Bellandur Night Safety Overhaul",
+  "interventions": [
+    "street_lighting_upgrade",
+    "speed_enforcement_camera",
+    "pedestrian_crossing_refuge"
+  ],
+  "created_by": "BBMP Traffic Engineering Cell"
+}
+```
+
+**Response (`201 Created`)**:
+```json
+{
+  "id": 1,
+  "segment_id": "BLR_ORR_006_2",
+  "scenario_name": "BBMP FY26 Bellandur Night Safety Overhaul",
+  "original_safety_score": 29.1,
+  "simulated_safety_score": 44.5,
+  "score_gain": 15.4,
+  "original_risk_tier": "CRITICAL",
+  "simulated_risk_tier": "HIGH",
+  "expected_fatality_reduction_pct": 20.8,
+  "applied_interventions": [
+    "street_lighting_upgrade",
+    "speed_enforcement_camera",
+    "pedestrian_crossing_refuge"
+  ],
+  "created_by": "BBMP Traffic Engineering Cell",
+  "created_at": "2026-09-12T14:00:00Z"
+}
+```
+
+### `GET /api/v1/simulate/saved`
+Retrieves all persisted simulation scenarios for review and comparison.
+
+**Response (`200 OK`)**: List of `SavedSimulationResponse` objects.
+
+---
+
+## 8. Municipal Action Tracker (Project Management)
+
+### `GET /api/v1/actions`
+Retrieves all tracked road safety projects across Bengaluru corridors.
+
+**Query Parameters (Optional)**:
+- `status` (string, optional): Filter by `PLANNED`, `IN_PROGRESS`, `COMPLETED`, `ON_HOLD`.
+- `agency` (string, optional): Filter by `BBMP`, `BTP`, `NHAI`, `DULT`.
+
+**Response (`200 OK`)**:
+```json
+[
+  {
+    "id": 1,
+    "segment_id": "BLR_ORR_006_2",
+    "corridor_name": "Outer Ring Road (Silk Board to Hebbal)",
+    "road_name": "Outer Ring Road (Bellandur Ecospace)",
+    "intervention_type": "street_lighting_upgrade",
+    "intervention_label": "High-Mast Smart LED Lighting Upgrade",
+    "status": "IN_PROGRESS",
+    "priority_tier": "CRITICAL",
+    "assigned_agency": "BBMP",
+    "allocated_budget_lakhs": 45.0,
+    "notes": "Smart LED installation tender awarded; poles delivery scheduled for next week.",
+    "target_date": "2026-10-30",
+    "created_at": "2026-09-12T13:30:00Z",
+    "updated_at": "2026-09-12T13:30:00Z"
+  }
+]
+```
+
+### `POST /api/v1/actions`
+Creates a new tracked engineering or enforcement project.
+
+**Request Body**:
+```json
+{
+  "segment_id": "BLR_ORR_014_1",
+  "corridor_name": "Outer Ring Road (Silk Board to Hebbal)",
+  "road_name": "Outer Ring Road (Kadubeesanahalli)",
+  "intervention_type": "speed_enforcement_camera",
+  "intervention_label": "Automated Speed Violation Radar (ANPR)",
+  "priority_tier": "CRITICAL",
+  "assigned_agency": "BTP",
+  "allocated_budget_lakhs": 12.0,
+  "notes": "BTP approved speed radar placement to curb nighttime overspeeding.",
+  "target_date": "2026-10-15"
+}
+```
+
+### `PATCH /api/v1/actions/{action_id}`
+Updates the status, budget, or notes of an existing project.
+
+**Request Body**:
+```json
+{
+  "status": "COMPLETED",
+  "allocated_budget_lakhs": 42.5,
+  "notes": "Installation verified by BTP field inspection."
+}
+```
+
+### `DELETE /api/v1/actions/{action_id}`
+Deletes an action item. Returns `{"message": "Action item {id} deleted successfully"}`.
