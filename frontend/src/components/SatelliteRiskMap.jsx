@@ -8,14 +8,18 @@ import {
   Layers, 
   ChevronDown, 
   Compass,
-  Moon
+  Moon,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { CORRIDOR_POLYLINES } from '../services/mockData';
 
 export default function SatelliteRiskMap({ 
   corridors, 
   selectedCorridor, 
-  onSelectCorridor 
+  onSelectCorridor,
+  isMaximized = false,
+  onToggleMaximize
 }) {
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -24,7 +28,7 @@ export default function SatelliteRiskMap({
   const tileLayerRef = useRef(null);
 
   const [mapMode, setMapMode] = useState('satellite'); // 'map' | 'satellite' | 'traffic'
-  const [layersOpen, setLayersOpen] = useState(true);
+  const [layersOpen, setLayersOpen] = useState(false); // Closed by default to maximize visible map!
   
   // Layer checklist state
   const [activeLayers, setActiveLayers] = useState({
@@ -46,7 +50,7 @@ export default function SatelliteRiskMap({
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
     const map = L.map(mapContainerRef.current, {
-      center: [12.9716, 77.6200],
+      center: [12.965, 77.625],
       zoom: 12,
       zoomControl: false,
       attributionControl: false
@@ -66,13 +70,45 @@ export default function SatelliteRiskMap({
     markersGroupRef.current = L.featureGroup().addTo(map);
     mapInstanceRef.current = map;
 
+    // Invalidate size on mount
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 150);
+
     return () => {
       map.remove();
       mapInstanceRef.current = null;
     };
   }, []);
 
-  // 2. Handle Map Mode Switching (Map / Satellite / Traffic)
+  // 2. ResizeObserver to handle fluid resizing when panels collapse/expand
+  useEffect(() => {
+    if (!mapContainerRef.current || !mapInstanceRef.current) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    });
+
+    resizeObserver.observe(mapContainerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  // 2b. Invalidate map size when isMaximized toggles (after CSS grid transition)
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      const timer = setTimeout(() => {
+        mapInstanceRef.current.invalidateSize();
+      }, 320);
+      return () => clearTimeout(timer);
+    }
+  }, [isMaximized]);
+
+  // 3. Handle Map Mode Switching (Map / Satellite / Traffic)
   useEffect(() => {
     if (!mapInstanceRef.current || !tileLayerRef.current) return;
 
@@ -95,12 +131,11 @@ export default function SatelliteRiskMap({
       subdomains
     }).addTo(map);
 
-    // Re-bring features to front
     if (polylinesGroupRef.current) polylinesGroupRef.current.bringToBack();
     if (markersGroupRef.current) markersGroupRef.current.bringToFront();
   }, [mapMode]);
 
-  // 3. Render Corridors Polylines & Markers
+  // 4. Render Corridors Polylines & Markers
   useEffect(() => {
     if (!mapInstanceRef.current) return;
 
@@ -196,7 +231,7 @@ export default function SatelliteRiskMap({
     // Fly to selected spot
     if (selectedCorridor) {
       map.flyTo([selectedCorridor.latitude, selectedCorridor.longitude], 13.5, {
-        duration: 0.9
+        duration: 0.8
       });
     }
   }, [corridors, selectedCorridor, activeLayers]);
@@ -205,7 +240,13 @@ export default function SatelliteRiskMap({
   const handleZoomIn = () => mapInstanceRef.current?.zoomIn();
   const handleZoomOut = () => mapInstanceRef.current?.zoomOut();
   const handleRecenter = () => {
-    mapInstanceRef.current?.flyTo([12.9716, 77.6200], 12);
+    if (!mapInstanceRef.current) return;
+    if (corridors.length > 0) {
+      const bounds = L.latLngBounds(corridors.map(c => [c.latitude, c.longitude]));
+      mapInstanceRef.current.fitBounds(bounds, { padding: [40, 40] });
+    } else {
+      mapInstanceRef.current.flyTo([12.965, 77.625], 12);
+    }
   };
 
   return (
@@ -234,32 +275,45 @@ export default function SatelliteRiskMap({
           </button>
         </div>
 
-        {/* Night-time Risk Filter Dropdown */}
-        <div className="night-risk-pill-btn">
-          <Moon size={14} className="moon-icon text-amber" />
-          <span>Night-time Risk</span>
-          <ChevronDown size={14} />
+        {/* Right Controls: Night Risk + Expand/Focus Map */}
+        <div className="map-top-right-actions">
+          <div className="night-risk-pill-btn">
+            <Moon size={13} className="moon-icon text-amber" />
+            <span>Night-time Risk</span>
+            <ChevronDown size={13} />
+          </div>
+
+          {onToggleMaximize && (
+            <button 
+              className="map-maximize-btn" 
+              onClick={onToggleMaximize}
+              title={isMaximized ? "Restore Panels View" : "Maximize Map View"}
+            >
+              {isMaximized ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+              <span className="max-text desktop-only">{isMaximized ? "Restore" : "Expand Map"}</span>
+            </button>
+          )}
         </div>
       </div>
 
       {/* 2. Left Zoom / Tool Stack Controls */}
       <div className="map-left-controls">
         <button className="map-ctrl-btn" onClick={handleZoomIn} title="Zoom In">
-          <Plus size={16} />
+          <Plus size={15} />
         </button>
         <button className="map-ctrl-btn" onClick={handleZoomOut} title="Zoom Out">
-          <Minus size={16} />
+          <Minus size={15} />
         </button>
         <div className="ctrl-divider"></div>
-        <button className="map-ctrl-btn" onClick={handleRecenter} title="Re-center Bengaluru">
-          <Crosshair size={16} />
+        <button className="map-ctrl-btn" onClick={handleRecenter} title="Fit All Blackspots (Bengaluru)">
+          <Crosshair size={15} />
         </button>
         <button 
           className={`map-ctrl-btn ${layersOpen ? 'active' : ''}`} 
           onClick={() => setLayersOpen(!layersOpen)}
           title="Toggle Layers Panel"
         >
-          <Layers size={16} />
+          <Layers size={15} />
         </button>
       </div>
 
@@ -371,7 +425,7 @@ export default function SatelliteRiskMap({
       {/* 6. Bottom Right Compass & Scale */}
       <div className="map-scale-compass">
         <div className="compass-icon-wrap" title="North">
-          <Compass size={18} className="compass-icon" />
+          <Compass size={16} className="compass-icon" />
           <span className="north-arrow">N</span>
         </div>
         <div className="scale-bar-wrap">

@@ -20,6 +20,7 @@ export default function App() {
   // Responsive / Collapsible Layout States
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [corridorListCollapsed, setCorridorListCollapsed] = useState(false);
+  const [mapMaximized, setMapMaximized] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [mobileActiveView, setMobileActiveView] = useState('map'); // 'map' | 'corridors' | 'inspector'
 
@@ -30,10 +31,10 @@ export default function App() {
   // Auto-adapt on smaller screen sizes
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth < 1200 && !sidebarCollapsed) {
+      if (window.innerWidth < 1180 && !sidebarCollapsed) {
         setSidebarCollapsed(true);
       }
-      if (window.innerWidth < 1080 && !corridorListCollapsed) {
+      if (window.innerWidth < 1000 && !corridorListCollapsed) {
         setCorridorListCollapsed(true);
       }
     };
@@ -69,7 +70,6 @@ export default function App() {
 
   const handleSelectCorridor = (corridor) => {
     setSelectedCorridor(corridor);
-    // On mobile, automatically show inspector when a corridor is picked
     if (window.innerWidth < 900) {
       setMobileActiveView('inspector');
     }
@@ -141,7 +141,7 @@ export default function App() {
           </div>
 
           {/* 3-Column Core Command Center Grid */}
-          <main className={`command-grid-layout ${corridorListCollapsed ? 'corridors-collapsed' : ''} mobile-view-${mobileActiveView}`}>
+          <main className={`command-grid-layout ${corridorListCollapsed ? 'corridors-collapsed' : ''} ${mapMaximized ? 'map-maximized' : ''} mobile-view-${mobileActiveView}`}>
             {/* Column 1: Road Corridors List */}
             <div className="grid-col-corridors">
               <CorridorList 
@@ -159,6 +159,8 @@ export default function App() {
                 corridors={corridors}
                 selectedCorridor={selectedCorridor}
                 onSelectCorridor={handleSelectCorridor}
+                isMaximized={mapMaximized}
+                onToggleMaximize={() => setMapMaximized(!mapMaximized)}
               />
             </section>
 
