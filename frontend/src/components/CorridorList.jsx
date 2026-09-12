@@ -4,38 +4,44 @@ import {
   SlidersHorizontal, 
   Car, 
   Skull, 
-  Footprints,
-  ChevronLeft,
-  ChevronRight,
-  Route
+  Footprints, 
+  ChevronLeft, 
+  ChevronRight, 
+  Route, 
+  X, 
+  AlertCircle 
 } from 'lucide-react';
 
 export default function CorridorList({ 
-  corridors, 
+  corridors = [], 
   selectedCorridor, 
-  onSelectCorridor,
-  isCollapsed = false,
-  onToggleCollapse
+  onSelectCorridor, 
+  isCollapsed = false, 
+  onToggleCollapse 
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState('ALL');
 
   const filteredCorridors = corridors.filter((c) => {
-    const matchesSearch = 
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.corridor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.highway.toLowerCase().includes(searchTerm.toLowerCase());
+    const term = searchTerm.toLowerCase().trim();
+    const matchesSearch = !term || (
+      (c.name || '').toLowerCase().includes(term) ||
+      (c.corridor_name || '').toLowerCase().includes(term) ||
+      (c.location || '').toLowerCase().includes(term) ||
+      (c.highway || '').toLowerCase().includes(term) ||
+      (c.risk_tier || '').toLowerCase().includes(term)
+    );
     
     if (activeFilter === 'ALL') return matchesSearch;
-    if (activeFilter === 'CRITICAL') return matchesSearch && c.risk_tier === 'Critical';
-    if (activeFilter === 'HIGH') return matchesSearch && c.risk_tier === 'High';
-    if (activeFilter === 'MEDIUM') return matchesSearch && c.risk_tier === 'Medium';
+    if (activeFilter === 'CRITICAL') return matchesSearch && (c.risk_tier || '').toLowerCase() === 'critical';
+    if (activeFilter === 'HIGH') return matchesSearch && (c.risk_tier || '').toLowerCase() === 'high';
+    if (activeFilter === 'MEDIUM') return matchesSearch && (c.risk_tier || '').toLowerCase() === 'medium';
     return matchesSearch;
   });
 
-  const criticalCount = corridors.filter((c) => c.risk_tier === 'Critical').length;
-  const highCount = corridors.filter((c) => c.risk_tier === 'High').length;
-  const mediumCount = corridors.filter((c) => c.risk_tier === 'Medium').length;
+  const criticalCount = corridors.filter((c) => (c.risk_tier || '').toLowerCase() === 'critical').length;
+  const highCount = corridors.filter((c) => (c.risk_tier || '').toLowerCase() === 'high').length;
+  const mediumCount = corridors.filter((c) => (c.risk_tier || '').toLowerCase() === 'medium').length;
 
   if (isCollapsed) {
     return (
@@ -57,7 +63,7 @@ export default function CorridorList({
           <div className="mini-pills-stack">
             {corridors.slice(0, 6).map(c => {
               const isSelected = selectedCorridor && selectedCorridor.id === c.id;
-              const isCritical = c.risk_tier === 'Critical';
+              const isCritical = (c.risk_tier || '').toLowerCase() === 'critical';
               return (
                 <button
                   key={c.id}
@@ -108,6 +114,15 @@ export default function CorridorList({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+          {searchTerm && (
+            <button 
+              className="search-clear-btn" 
+              onClick={() => setSearchTerm('')}
+              title="Clear search"
+            >
+              <X size={12} />
+            </button>
+          )}
         </div>
 
         {/* Filter Pills */}
@@ -141,64 +156,82 @@ export default function CorridorList({
 
       {/* Corridors Scrollable List */}
       <div className="corridors-cards-scroll">
-        {filteredCorridors.map((item) => {
-          const isSelected = selectedCorridor && selectedCorridor.id === item.id;
-          const isCritical = item.risk_tier === 'Critical';
-          const isHigh = item.risk_tier === 'High';
-          
-          let scoreBgClass = 'score-red';
-          if (isHigh) scoreBgClass = 'score-orange';
-          if (item.risk_tier === 'Medium') scoreBgClass = 'score-amber';
-
-          return (
-            <div
-              key={item.id}
-              className={`corridor-list-card ${isSelected ? 'selected' : ''}`}
-              onClick={() => onSelectCorridor(item)}
+        {filteredCorridors.length === 0 ? (
+          <div className="corridors-empty-state">
+            <AlertCircle size={22} className="text-muted empty-icon" />
+            <div className="empty-title">No matching corridors</div>
+            <p className="empty-sub">No results for "{searchTerm}". Try clearing your search or filters.</p>
+            <button 
+              className="empty-reset-btn"
+              onClick={() => {
+                setSearchTerm('');
+                setActiveFilter('ALL');
+              }}
             >
-              {/* Thumbnail Image */}
-              <div className="corridor-thumb-wrap">
-                <img 
-                  src={item.image} 
-                  alt={item.name} 
-                  className="corridor-thumb-img"
-                  onError={(e) => {
-                    e.target.src = 'https://images.unsplash.com/photo-1545459720-aac8509eb02c?auto=format&fit=crop&w=200&q=80';
-                  }}
-                />
-              </div>
+              Reset Filters
+            </button>
+          </div>
+        ) : (
+          filteredCorridors.map((item) => {
+            const isSelected = selectedCorridor && selectedCorridor.id === item.id;
+            const tierLower = (item.risk_tier || '').toLowerCase();
+            const isCritical = tierLower === 'critical';
+            const isHigh = tierLower === 'high';
+            
+            let scoreBgClass = 'score-red';
+            if (isHigh) scoreBgClass = 'score-orange';
+            if (tierLower === 'medium') scoreBgClass = 'score-amber';
 
-              {/* Card Main Info */}
-              <div className="corridor-info-col">
-                <div className="corridor-card-name">{item.name}</div>
-                <div className="corridor-card-sub">{item.corridor_name}</div>
+            return (
+              <div
+                key={item.id}
+                className={`corridor-list-card ${isSelected ? 'selected' : ''}`}
+                onClick={() => onSelectCorridor(item)}
+              >
+                {/* Thumbnail Image */}
+                <div className="corridor-thumb-wrap">
+                  <img 
+                    src={item.image} 
+                    alt={item.name} 
+                    className="corridor-thumb-img"
+                    onError={(e) => {
+                      e.target.src = 'https://images.unsplash.com/photo-1545459720-aac8509eb02c?auto=format&fit=crop&w=200&q=80';
+                    }}
+                  />
+                </div>
 
-                {/* 3 Micro Stats */}
-                <div className="corridor-stats-row">
-                  <div className="micro-stat">
-                    <Car size={12} className="text-muted" />
-                    <span>{item.stats_2023.crashes}</span>
+                {/* Card Main Info */}
+                <div className="corridor-info-col">
+                  <div className="corridor-card-name">{item.name}</div>
+                  <div className="corridor-card-sub">{item.corridor_name}</div>
+
+                  {/* 3 Micro Stats */}
+                  <div className="corridor-stats-row">
+                    <div className="micro-stat">
+                      <Car size={12} className="text-muted" />
+                      <span>{item.stats_2023?.crashes ?? 0}</span>
+                    </div>
+                    <div className="micro-stat">
+                      <Skull size={12} className="text-muted" />
+                      <span>{item.stats_2023?.deaths ?? 0}</span>
+                    </div>
+                    <div className="micro-stat">
+                      <Footprints size={12} className="text-muted" />
+                      <span>{item.stats_2023?.injuries ?? 0}</span>
+                    </div>
                   </div>
-                  <div className="micro-stat">
-                    <Skull size={12} className="text-muted" />
-                    <span>{item.stats_2023.deaths}</span>
-                  </div>
-                  <div className="micro-stat">
-                    <Footprints size={12} className="text-muted" />
-                    <span>{item.stats_2023.injuries}</span>
+                </div>
+
+                {/* Circular Risk Score Badge */}
+                <div className="corridor-score-badge-col">
+                  <div className={`circular-score-pill ${scoreBgClass}`}>
+                    {item.risk_score}
                   </div>
                 </div>
               </div>
-
-              {/* Circular Risk Score Badge */}
-              <div className="corridor-score-badge-col">
-                <div className={`circular-score-pill ${scoreBgClass}`}>
-                  {item.risk_score}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
     </aside>
   );

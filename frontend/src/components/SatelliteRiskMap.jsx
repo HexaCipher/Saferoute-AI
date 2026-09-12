@@ -70,13 +70,24 @@ export default function SatelliteRiskMap({
     markersGroupRef.current = L.featureGroup().addTo(map);
     mapInstanceRef.current = map;
 
-    // Invalidate size on mount
-    setTimeout(() => {
-      map.invalidateSize();
+    // Invalidate size safely on mount
+    const timer = setTimeout(() => {
+      if (mapInstanceRef.current && map._container) {
+        try {
+          map.invalidateSize();
+        } catch (err) {
+          // Leaflet pane unmounted during HMR
+        }
+      }
     }, 150);
 
     return () => {
-      map.remove();
+      clearTimeout(timer);
+      try {
+        map.remove();
+      } catch (err) {
+        // already removed
+      }
       mapInstanceRef.current = null;
     };
   }, []);
@@ -86,8 +97,12 @@ export default function SatelliteRiskMap({
     if (!mapContainerRef.current || !mapInstanceRef.current) return;
 
     const resizeObserver = new ResizeObserver(() => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.invalidateSize();
+      if (mapInstanceRef.current && mapInstanceRef.current._container) {
+        try {
+          mapInstanceRef.current.invalidateSize();
+        } catch (err) {
+          // ignore during transitions
+        }
       }
     });
 
@@ -102,7 +117,13 @@ export default function SatelliteRiskMap({
   useEffect(() => {
     if (mapInstanceRef.current) {
       const timer = setTimeout(() => {
-        mapInstanceRef.current.invalidateSize();
+        if (mapInstanceRef.current && mapInstanceRef.current._container) {
+          try {
+            mapInstanceRef.current.invalidateSize();
+          } catch (err) {
+            // pane not attached
+          }
+        }
       }, 320);
       return () => clearTimeout(timer);
     }
