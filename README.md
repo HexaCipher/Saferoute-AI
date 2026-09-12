@@ -176,7 +176,6 @@ SafeRoute AI follows an end-to-end, 10-step data-to-decision pipeline:
 ```text
 team_042/
 ├── README.md                          ← You are here
-├── road_safety.db                     ← SQLite database (seeded)
 │
 ├── backend/                           # FastAPI REST service & ML core
 │   ├── main.py                        # App entry point, CORS, router mounting, lifespan
@@ -218,22 +217,20 @@ team_042/
 │   ├── src/
 │   │   ├── App.jsx                    # Layout orchestration, state, global shortcuts
 │   │   ├── components/
-│   │   │   ├── SatelliteRiskMap.jsx   # Leaflet satellite map (Esri imagery, layers)
-│   │   │   ├── CorridorList.jsx       # Corridor/segment list panel
-│   │   │   ├── InspectorDrawer.jsx    # Segment intelligence panel
-│   │   │   ├── KpiMetricsRow.jsx      # City-wide KPI strip
-│   │   │   ├── SimulatorModal.jsx     # What-If intervention simulator
-│   │   │   ├── SearchModal.jsx        # ⌘K command palette
+│   │   │   ├── SatelliteRiskMap.jsx   # Leaflet satellite map (live 428-segment GeoJSON)
+│   │   │   ├── CorridorList.jsx       # Corridor/segment list panel (search + tier filters)
+│   │   │   ├── InspectorDrawer.jsx    # Segment intelligence panel (live detail API)
+│   │   │   ├── KpiMetricsRow.jsx      # City-wide KPI strip (analytics summary)
+│   │   │   ├── SimulatorModal.jsx     # What-If simulator (live POST /simulate + save)
+│   │   │   ├── SearchModal.jsx        # ⌘K command palette (real segment search)
 │   │   │   └── SidebarNav / TopHeader / FooterBar
 │   │   └── services/
-│   │       ├── api.js                 # API service layer (live backend + fallbacks)
-│   │       └── mockData.js            # Curated corridor intelligence (demo mode)
+│   │       └── api.js                 # Pure live API service layer (no mock data)
+│   ├── public/favicon.svg
 │   ├── docs/                          # PRD, TRD, UI/UX brief, API contract, pitch deck
 │   └── package.json
 │
-└── data/                              # Legacy early-hackathon demo data
-    ├── bangalore_blackspots.json
-    └── seed_data.py
+└── road_safety.db                     ← SQLite database (seeded)
 ```
 
 ---
@@ -432,8 +429,8 @@ npm run build
 - [x] "Fix This First" prioritization engine
 - [x] Municipal action tracker with persistence
 - [x] Responsive command-center UI + ⌘K search palette
-- [ ] Render all 428 live segments on the satellite map (currently curated corridor polylines)
-- [ ] Route the frontend simulator through the live `POST /simulate` endpoint
+- [x] Render all 428 live segments on the satellite map (pure live API, no mock data)
+- [x] Route the frontend simulator through the live `POST /simulate` endpoint
 - [ ] Temporal crash data integration for time-of-day risk curves
 - [ ] PostgreSQL + PostGIS upgrade for multi-city scale
 - [ ] Auth (JWT) for planner/police roles on the action tracker
@@ -448,7 +445,7 @@ npm run build
 3. **SQLite for persistence** — fine for hackathon scale; switch `DATABASE_URL` to PostgreSQL for concurrent production writes.
 4. **Simulation fatality estimates** are modeled via Nilsson's power rule from score deltas — directional and grounded, but not a substitute for before/after empirical studies.
 5. **Lighting ground truth** — `unverified` lighting (the majority) is treated conservatively with the 1.45× night multiplier.
-6. **Legacy scaffolding** — the root `data/` folder and the `/api/v1/accidents` CRUD predate the real pipeline and are retained only for compatibility.
+6. **Legacy compatibility surface** — the `/api/v1/accidents` CRUD and the `Accident` model predate the segment pipeline; they remain functional for backward compatibility but are not used by the dashboard.
 
 ---
 

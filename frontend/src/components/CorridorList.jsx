@@ -131,16 +131,19 @@ export default function CorridorList({
             >
               All ({segments.length})
             </button>
-            {corridors.map(c => (
-              <button
-                key={c.corridor_id}
-                className={`corridor-chip ${selectedCorridorId === c.corridor_id ? 'active' : ''}`}
-                onClick={() => onSelectCorridor && onSelectCorridor(c.corridor_id)}
-                title={`${c.corridor_name} — Avg Safety: ${c.average_safety_score}/100`}
-              >
-                {c.corridor_id} ({c.segment_count})
-              </button>
-            ))}
+            {corridors.map(c => {
+              const label = c.corridor_id.replace('BLR_', '');
+              return (
+                <button
+                  key={c.corridor_id}
+                  className={`corridor-chip ${selectedCorridorId === c.corridor_id ? 'active' : ''}`}
+                  onClick={() => onSelectCorridor && onSelectCorridor(c.corridor_id)}
+                  title={`${c.corridor_name} — Avg Safety: ${c.average_safety_score}/100`}
+                >
+                  {label} ({c.segment_count})
+                </button>
+              );
+            })}
           </div>
         )}
 
