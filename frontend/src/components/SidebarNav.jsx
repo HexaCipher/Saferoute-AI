@@ -7,8 +7,8 @@ import {
   Sliders, 
   FileText, 
   Database,
-  ChevronLeft,
-  ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
   Target
 } from 'lucide-react';
 
@@ -39,17 +39,34 @@ export default function SidebarNav({
 
   return (
     <aside className={`global-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
-      {/* Top Collapse / Expand Toggle Button */}
-      <div className="sidebar-top-toggle-row">
-        <button 
-          className="sidebar-collapse-btn"
-          onClick={onToggleCollapse}
-          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-          {!isCollapsed && <span className="collapse-btn-label">Collapse</span>}
-        </button>
+      {/* Dedicated Top Bar: Height 52px, perfectly aligned with TopHeader */}
+      <div className="sidebar-top-bar">
+        {!isCollapsed ? (
+          <>
+            <div className="sidebar-brand-pill">
+              <div className="sidebar-pulse-dot" />
+              <span className="sidebar-brand-label">RoadSafe OS</span>
+            </div>
+            <button 
+              className="sidebar-collapse-btn"
+              onClick={onToggleCollapse}
+              title="Collapse sidebar"
+              aria-label="Collapse sidebar"
+            >
+              <PanelLeftClose size={14} />
+              <span className="collapse-btn-label">Collapse</span>
+            </button>
+          </>
+        ) : (
+          <button 
+            className="sidebar-collapse-btn icon-only"
+            onClick={onToggleCollapse}
+            title="Expand sidebar"
+            aria-label="Expand sidebar"
+          >
+            <PanelLeftOpen size={16} />
+          </button>
+        )}
       </div>
 
       {/* Primary Navigation List */}
@@ -64,7 +81,7 @@ export default function SidebarNav({
               onClick={() => handleNavClick(item.id)}
               title={isCollapsed ? item.label : undefined}
             >
-              <Icon size={18} className="nav-item-icon" />
+              <Icon size={17} className="nav-item-icon" />
               {!isCollapsed && (
                 <>
                   <span className="nav-item-text">{item.label}</span>
