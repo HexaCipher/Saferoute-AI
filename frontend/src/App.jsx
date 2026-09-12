@@ -8,6 +8,11 @@ import InspectorDrawer from './components/InspectorDrawer';
 import FooterBar from './components/FooterBar';
 import SearchModal from './components/SearchModal';
 import SimulatorModal from './components/SimulatorModal';
+import CorridorsView from './components/CorridorsView';
+import RiskAnalysisView from './components/RiskAnalysisView';
+import InterventionsView from './components/InterventionsView';
+import ReportsView from './components/ReportsView';
+import DataHubView from './components/DataHubView';
 import { apiService } from './services/api';
 import { Map, ListFilter, BarChart3, AlertTriangle, RotateCcw, Terminal } from 'lucide-react';
 
@@ -225,69 +230,126 @@ export default function App() {
             {/* Subheader & 5 Macro KPI Metrics Strip */}
             <KpiMetricsRow summary={summary} loading={loading} />
 
-            {/* Mobile View Switcher Tabs (Only visible on screens < 900px) */}
-            <div className="mobile-view-switcher">
-              <button 
-                className={`switcher-pill ${mobileActiveView === 'corridors' ? 'active' : ''}`}
-                onClick={() => setMobileActiveView('corridors')}
-              >
-                <ListFilter size={14} />
-                <span>Corridors ({summary?.corridor_breakdown?.length || 3})</span>
-              </button>
-              <button 
-                className={`switcher-pill ${mobileActiveView === 'map' ? 'active' : ''}`}
-                onClick={() => setMobileActiveView('map')}
-              >
-                <Map size={14} />
-                <span>Satellite Map ({segments.length})</span>
-              </button>
-              <button 
-                className={`switcher-pill ${mobileActiveView === 'inspector' ? 'active' : ''}`}
-                onClick={() => setMobileActiveView('inspector')}
-              >
-                <BarChart3 size={14} />
-                <span>Telemetry</span>
-              </button>
-            </div>
+            {/* 1. Overview View (Default 3-Column Command Center) */}
+            {activeNav === 'overview' && (
+              <>
+                {/* Mobile View Switcher Tabs (Only visible on screens < 900px) */}
+                <div className="mobile-view-switcher">
+                  <button 
+                    className={`switcher-pill ${mobileActiveView === 'corridors' ? 'active' : ''}`}
+                    onClick={() => setMobileActiveView('corridors')}
+                  >
+                    <ListFilter size={14} />
+                    <span>Corridors ({summary?.corridor_breakdown?.length || 3})</span>
+                  </button>
+                  <button 
+                    className={`switcher-pill ${mobileActiveView === 'map' ? 'active' : ''}`}
+                    onClick={() => setMobileActiveView('map')}
+                  >
+                    <Map size={14} />
+                    <span>Satellite Map ({segments.length})</span>
+                  </button>
+                  <button 
+                    className={`switcher-pill ${mobileActiveView === 'inspector' ? 'active' : ''}`}
+                    onClick={() => setMobileActiveView('inspector')}
+                  >
+                    <BarChart3 size={14} />
+                    <span>Telemetry</span>
+                  </button>
+                </div>
 
-            {/* 3-Column Core Command Center Grid */}
-            <main className={`command-grid-layout ${corridorListCollapsed ? 'corridors-collapsed' : ''} ${mapMaximized ? 'map-maximized' : ''} mobile-view-${mobileActiveView}`}>
-              {/* Column 1: Road Corridors & 500m Segments List */}
-              <div className="grid-col-corridors">
-                <CorridorList 
-                  corridors={summary?.corridor_breakdown || []}
-                  segments={segments}
-                  selectedSegmentId={selectedSegmentId}
-                  onSelectSegment={handleSelectSegment}
-                  selectedCorridorId={selectedCorridorId}
-                  onSelectCorridor={handleSelectCorridor}
-                  isCollapsed={corridorListCollapsed}
-                  onToggleCollapse={() => setCorridorListCollapsed(!corridorListCollapsed)}
-                  loading={loading}
-                />
-              </div>
+                {/* 3-Column Core Command Center Grid */}
+                <main className={`command-grid-layout ${corridorListCollapsed ? 'corridors-collapsed' : ''} ${mapMaximized ? 'map-maximized' : ''} mobile-view-${mobileActiveView}`}>
+                  {/* Column 1: Road Corridors & 500m Segments List */}
+                  <div className="grid-col-corridors">
+                    <CorridorList 
+                      corridors={summary?.corridor_breakdown || []}
+                      segments={segments}
+                      selectedSegmentId={selectedSegmentId}
+                      onSelectSegment={handleSelectSegment}
+                      selectedCorridorId={selectedCorridorId}
+                      onSelectCorridor={handleSelectCorridor}
+                      isCollapsed={corridorListCollapsed}
+                      onToggleCollapse={() => setCorridorListCollapsed(!corridorListCollapsed)}
+                      loading={loading}
+                    />
+                  </div>
 
-              {/* Column 2: Center Realistic 3D Satellite Map (Real GeoJSON) */}
-              <section className="grid-col-map map-view-column">
-                <SatelliteRiskMap 
-                  segments={segments}
-                  metadata={segmentsMetadata}
-                  selectedSegmentId={selectedSegmentId}
-                  onSelectSegment={handleSelectSegment}
-                  isMaximized={mapMaximized}
-                  onToggleMaximize={() => setMapMaximized(!mapMaximized)}
-                  loading={loading}
-                />
-              </section>
+                  {/* Column 2: Center Realistic 3D Satellite Map (Real GeoJSON) */}
+                  <section className="grid-col-map map-view-column">
+                    <SatelliteRiskMap 
+                      segments={segments}
+                      metadata={segmentsMetadata}
+                      selectedSegmentId={selectedSegmentId}
+                      onSelectSegment={handleSelectSegment}
+                      isMaximized={mapMaximized}
+                      onToggleMaximize={() => setMapMaximized(!mapMaximized)}
+                      loading={loading}
+                    />
+                  </section>
 
-              {/* Column 3: Segment Telemetry Inspector Drawer */}
-              <aside className="grid-col-inspector inspector-view-column">
-                <InspectorDrawer 
-                  selectedSegmentId={selectedSegmentId}
-                  onOpenSimulator={() => setSimulatorOpen(true)}
-                />
-              </aside>
-            </main>
+                  {/* Column 3: Segment Telemetry Inspector Drawer */}
+                  <aside className="grid-col-inspector inspector-view-column">
+                    <InspectorDrawer 
+                      selectedSegmentId={selectedSegmentId}
+                      onOpenSimulator={() => setSimulatorOpen(true)}
+                    />
+                  </aside>
+                </main>
+              </>
+            )}
+
+            {/* 2. Corridors Deep-Dive View */}
+            {activeNav === 'corridors' && (
+              <CorridorsView 
+                corridors={summary?.corridor_breakdown || []}
+                segments={segments}
+                onSelectSegment={handleSelectSegment}
+                onNavigateToOverview={(corridorId, segmentId) => {
+                  if (corridorId) setSelectedCorridorId(corridorId);
+                  if (segmentId) setSelectedSegmentId(segmentId);
+                  setActiveNav('overview');
+                }}
+                loading={loading}
+              />
+            )}
+
+            {/* 3. Empirical ML Risk Analysis View */}
+            {activeNav === 'risk_analysis' && (
+              <RiskAnalysisView 
+                summary={summary}
+                segments={segments}
+                onSelectSegment={handleSelectSegment}
+                onNavigateToOverview={(corridorId, segmentId) => {
+                  if (corridorId) setSelectedCorridorId(corridorId);
+                  if (segmentId) setSelectedSegmentId(segmentId);
+                  setActiveNav('overview');
+                }}
+              />
+            )}
+
+            {/* 4. Interventions & Action Tracker View */}
+            {activeNav === 'interventions' && (
+              <InterventionsView 
+                onOpenSimulator={() => setSimulatorOpen(true)}
+                onSelectSegment={handleSelectSegment}
+                onNavigateToOverview={(corridorId, segmentId) => {
+                  if (corridorId) setSelectedCorridorId(corridorId);
+                  if (segmentId) setSelectedSegmentId(segmentId);
+                  setActiveNav('overview');
+                }}
+              />
+            )}
+
+            {/* 5. Executive Reports & CSV Export View */}
+            {activeNav === 'reports' && (
+              <ReportsView summary={summary} />
+            )}
+
+            {/* 6. Developer & Municipal Data Hub View */}
+            {(activeNav === 'data_hub' || activeNav === 'simulate') && (
+              <DataHubView backendHealth={backendHealth} />
+            )}
           </div>
         )}
 

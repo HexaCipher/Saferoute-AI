@@ -1,5 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#0A0E17"/>
-  <path d="M16 4l9 3.5v8.2c0 6.1-3.8 10.2-9 12.3-5.2-2.1-9-6.2-9-12.3V7.5L16 4z" fill="none" stroke="#EF4444" stroke-width="2"/>
-  <path d="M11.5 16.2l3.1 3.1 6-6.4" fill="none" stroke="#22C55E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- SafeRoute AI — "The Guarded Route" brand mark -->
+  <defs>
+    <linearGradient id="sra-amber" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FCD34D"/>
+      <stop offset="1" stop-color="#F59E0B"/>
+    </linearGradient>
+  </defs>
+  <!-- White rim: separates the mark on light tabs and dark headers alike -->
+  <path d="M16 1.8 L28.4 6.2 V15.6 C28.4 22.9 23.4 27.6 16 30.5 C8.6 27.6 3.6 22.9 3.6 15.6 V6.2 Z" fill="#FFFFFF"/>
+  <!-- Shield: protection -->
+  <path d="M16 3.6 L26.6 7.4 V15.5 C26.6 21.7 22.2 25.8 16 28.4 C9.8 25.8 5.4 21.7 5.4 15.5 V7.4 Z" fill="url(#sra-amber)" stroke="#0A0E17" stroke-width="1.6" stroke-linejoin="round"/>
+  <!-- Road ribbon with dashed centerline -->
+  <path d="M13.4 8.6 H18.6 V20.2 H13.4 Z" fill="#0A0E17"/>
+  <line x1="16" y1="9.6" x2="16" y2="19.2" stroke="#FFFFFF" stroke-width="1.7" stroke-linecap="round" stroke-dasharray="2.6 2.2"/>
+  <!-- Green route node: safe arrival -->
+  <circle cx="16" cy="23.4" r="2.7" fill="#22C55E" stroke="#FFFFFF" stroke-width="1.3"/>
 </svg>

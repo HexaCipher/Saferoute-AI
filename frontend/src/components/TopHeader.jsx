@@ -33,11 +33,8 @@ export default function TopHeader({
         </button>
 
         <div className="brand-logo-mark">
-          {/* Stylized Road Ribbon SVG */}
-          <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M5 27L16 4L27 27H20L16 16L12 27H5Z" fill="#F59E0B" />
-            <path d="M14 27L16 20L18 27H14Z" fill="#FFFFFF" />
-          </svg>
+          {/* SafeRoute AI — "The Guarded Route" brand mark (same SVG as favicon) */}
+          <img src="/favicon.svg" width="26" height="26" alt="SafeRoute AI logo" className="brand-logo-img" />
         </div>
         <div className="brand-text">
           <div className="brand-title">SafeRoute AI</div>

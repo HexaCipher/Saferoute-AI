@@ -1,6 +1,8 @@
-# 🛣️ SafeRoute AI — Bengaluru NightRide
-
 <div align="center">
+
+<p><img src="frontend/public/favicon.svg" width="88" alt="SafeRoute AI — The Guarded Route logo"/></p>
+
+# 🛣️ SafeRoute AI — Bengaluru NightRide
 
 **Predictive Road Safety Intelligence Platform**
 

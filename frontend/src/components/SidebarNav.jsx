@@ -44,8 +44,8 @@ export default function SidebarNav({
         {!isCollapsed ? (
           <>
             <div className="sidebar-brand-pill">
-              <div className="sidebar-pulse-dot" />
-              <span className="sidebar-brand-label">RoadSafe OS</span>
+              <img src="/favicon.svg" width="16" height="16" alt="SafeRoute AI logo" className="sidebar-brand-logo" />
+              <span className="sidebar-brand-label">SafeRoute AI</span>
             </div>
             <button 
               className="sidebar-collapse-btn"

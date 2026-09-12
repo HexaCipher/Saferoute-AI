@@ -22,7 +22,8 @@ export default function FooterBar() {
           <span>All Systems Operational</span>
         </div>
         <span className="source-pipe">|</span>
-        <span className="script-signature">Safer Bengaluru</span>
+        <img src="/favicon.svg" width="13" height="13" alt="SafeRoute AI logo" className="footer-brand-logo" />
+        <span className="script-signature">SafeRoute AI — Safer Bengaluru</span>
       </div>
     </footer>
   );
