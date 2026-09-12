@@ -1,605 +1,933 @@
-export const BANGALORE_HOTSPOTS = [
+// Bengaluru Road Safety Intelligence Dataset
+// Sources: Bengaluru Traffic Police (BTP) Annual Crash Records & MoRTH Blackspot Audits 2023-2024
+
+export const CITY_OVERVIEW_METRICS = {
+  total_crashes_2023: 4974,
+  crashes_trend_pct: "+12%",
+  total_fatalities_2023: 915,
+  fatalities_trend_pct: "+8%",
+  total_injuries_2023: 6213,
+  injuries_trend_pct: "+11%",
+  motorcyclist_fatalities_pct: 59,
+  night_time_deaths_pct: 43,
+  night_time_window: "6 PM – 2 AM",
+  active_blackspots_count: 10,
+  critical_zones_count: 4,
+  high_risk_count: 4,
+  medium_risk_count: 2,
+  modeled_lives_saveable: 58,
+  economic_savings_cr: 84.5
+};
+
+export const BANGALORE_CORRIDORS = [
   {
     id: "BLR-001",
-    name: "Silk Board Junction (Hosur Road)",
-    location: "Silk Board, Hosur Rd / Outer Ring Rd Junction",
-    corridor_type: "Major Arterial Intersection",
+    name: "Silk Board Junction",
+    corridor_name: "Outer Ring Road",
+    location: "Outer Ring Road, Bengaluru",
+    highway: "NH 44 / ORR",
     latitude: 12.9172,
     longitude: 77.6228,
     risk_score: 94,
-    risk_level: "Critical",
-    accident_count_2023: 142,
-    fatalities_2023: 23,
-    injuries_2023: 118,
-    primary_cause: "Aggressive Weaving & Pedestrian Conflict",
-    causes_breakdown: [
-      { factor: "Aggressive Lane Weaving & Merging", percentage: 42 },
-      { factor: "Pedestrian Jaywalking (Lack of Skywalk)", percentage: 34 },
-      { factor: "Heavy Vehicle Blind Spots", percentage: 24 }
+    risk_tier: "Critical",
+    status_tag: "CRITICAL RISK",
+    image: "https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=800&q=80",
+    banner_image: "https://images.unsplash.com/photo-1545459720-aac8509eb02c?auto=format&fit=crop&w=1200&q=85",
+    stats_2023: {
+      crashes: 142,
+      crashes_yoy: "+27% vs. 2022",
+      deaths: 23,
+      deaths_yoy: "+21% vs. 2022",
+      injuries: 118,
+      injuries_yoy: "+16% vs. 2022"
+    },
+    percentile_rank: "Among top 1% highest risk corridors in Bengaluru",
+    why_it_happens: [
+      { factor: "Lane Weaving / Merging", percentage: 42, color: "#EF4444" },
+      { factor: "Pedestrian Jaywalking", percentage: 34, color: "#F97316" },
+      { factor: "Blind Spots", percentage: 24, color: "#94A3B8" }
     ],
     vulnerable_groups: [
-      { group: "Two-Wheelers", share: 52 },
-      { group: "Pedestrians", share: 36 },
-      { group: "Auto-Rickshaws", share: 12 }
+      { group: "Two-Wheelers", percentage: 52, icon: "bike", color: "#EF4444" },
+      { group: "Pedestrians", percentage: 36, icon: "pedestrian", color: "#F97316" },
+      { group: "Four-Wheelers", percentage: 9, icon: "car", color: "#64748B" },
+      { group: "Public Transport", percentage: 3, icon: "bus", color: "#94A3B8" }
     ],
-    peak_risk_hours: "21:00 - 01:30 & 08:30 - 11:00",
-    future_prediction: {
-      quarterly_trend: "+18% Risk Spike in Monsoon",
-      predicted_accidents_next_q: 44,
-      severity_forecast: "High Fatal Vulnerability for 2-Wheelers"
+    peak_risk: {
+      time_range: "21:00 – 01:30",
+      description: "Peak night-time risk (43% of total deaths)",
+      hourly_bars: [
+        { label: "6PM", value: 25 },
+        { label: "7PM", value: 40 },
+        { label: "8PM", value: 65 },
+        { label: "9PM", value: 85 },
+        { label: "10PM", value: 95 },
+        { label: "11PM", value: 100 },
+        { label: "12AM", value: 90 },
+        { label: "1AM", value: 80 },
+        { label: "2AM", value: 55 },
+        { label: "3AM", value: 35 },
+        { label: "4AM", value: 20 },
+        { label: "5AM", value: 15 },
+        { label: "6AM", value: 30 }
+      ]
+    },
+    ai_prediction: {
+      risk_level: "High Risk",
+      confidence: "87% confidence",
+      expected_crashes: "~35–45 crashes expected",
+      context: "if no intervention is taken.",
+      trend_points: [18, 22, 25, 29, 34, 42] // Jan, Mar, May, Jul, Sep, Nov
     },
     interventions: [
       {
+        id: "INT-01",
         rank: 1,
-        title: "Pedestrian Skywalk with Automated Lift & Pelican Signal",
+        title: "Pedestrian Skywalk",
+        subtitle: "At key crossing points",
         category: "Infrastructure",
-        cost_inr_lakhs: 45,
-        estimated_lives_saved_yearly: 9,
-        accident_reduction_pct: 38,
-        timeframe: "6-8 Weeks"
+        cost: "₹ 45 Lakhs",
+        cost_num: 45,
+        reduction: "-38%",
+        reduction_num: 38,
+        lives_saved: "+9",
+        lives_num: 9,
+        risk_score_impact: 18,
+        timeframe: "6-8 weeks"
       },
       {
+        id: "INT-02",
         rank: 2,
-        title: "AI Video Analytics for Lane Discipline & Illegal Stops",
-        category: "Enforcement AI",
-        cost_inr_lakhs: 14,
-        estimated_lives_saved_yearly: 6,
-        accident_reduction_pct: 25,
-        timeframe: "2 Weeks"
+        title: "Speed Enforcement",
+        subtitle: "Automated speed cameras",
+        category: "Enforcement",
+        cost: "₹ 32 Lakhs",
+        cost_num: 32,
+        reduction: "-28%",
+        reduction_num: 28,
+        lives_saved: "+6",
+        lives_num: 6,
+        risk_score_impact: 14,
+        timeframe: "2 weeks"
       },
       {
+        id: "INT-03",
         rank: 3,
-        title: "Channelized Median Islands with Rubberized Curb Delineators",
-        category: "Traffic Engineering",
-        cost_inr_lakhs: 8,
-        estimated_lives_saved_yearly: 4,
-        accident_reduction_pct: 18,
-        timeframe: "1 Week"
+        title: "Improved Lighting",
+        subtitle: "LED street lighting",
+        category: "Infrastructure",
+        cost: "₹ 18 Lakhs",
+        cost_num: 18,
+        reduction: "-22%",
+        reduction_num: 22,
+        lives_saved: "+4",
+        lives_num: 4,
+        risk_score_impact: 10,
+        timeframe: "1-2 weeks"
       }
     ]
   },
   {
     id: "BLR-002",
-    name: "Hebbal Flyover Junction (Bellary Road)",
-    location: "Hebbal Junction, NH-44 Airport Corridor",
-    corridor_type: "National Highway Corridor",
+    name: "Hebbal Flyover",
+    corridor_name: "NH 44",
+    location: "Bellary Road / Airport Corridor, Bengaluru",
+    highway: "NH 44",
     latitude: 13.0358,
     longitude: 77.5970,
-    risk_score: 91,
-    risk_level: "Critical",
-    accident_count_2023: 128,
-    fatalities_2023: 21,
-    injuries_2023: 99,
-    primary_cause: "Overspeeding at Flyover Descent & Merging Choke",
-    causes_breakdown: [
-      { factor: "Excessive Speed on Flyover Down-Ramp", percentage: 58 },
-      { factor: "Sharp Geometric Radius Convergence", percentage: 26 },
-      { factor: "Low Illumination during Fog/Night", percentage: 16 }
+    risk_score: 87,
+    risk_tier: "Critical",
+    status_tag: "CRITICAL RISK",
+    image: "https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=800&q=80",
+    banner_image: "https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=1200&q=85",
+    stats_2023: {
+      crashes: 128,
+      crashes_yoy: "+22% vs. 2022",
+      deaths: 19,
+      deaths_yoy: "+18% vs. 2022",
+      injuries: 102,
+      injuries_yoy: "+14% vs. 2022"
+    },
+    percentile_rank: "Top 2% highest fatality rate on National Highways in BLR",
+    why_it_happens: [
+      { factor: "Down-ramp Overspeeding", percentage: 48, color: "#EF4444" },
+      { factor: "Sharp Radius Convergence", percentage: 32, color: "#F97316" },
+      { factor: "Night Visibility & Fog", percentage: 20, color: "#94A3B8" }
     ],
     vulnerable_groups: [
-      { group: "Two-Wheelers", share: 61 },
-      { group: "Cars / Cabs", share: 25 },
-      { group: "Pedestrians", share: 14 }
+      { group: "Two-Wheelers", percentage: 61, icon: "bike", color: "#EF4444" },
+      { group: "Four-Wheelers", percentage: 25, icon: "car", color: "#F97316" },
+      { group: "Pedestrians", percentage: 14, icon: "pedestrian", color: "#64748B" },
+      { group: "Public Transport", percentage: 0, icon: "bus", color: "#94A3B8" }
     ],
-    peak_risk_hours: "23:00 - 04:00 (Night Airport Rush)",
-    future_prediction: {
-      quarterly_trend: "+12% Speeding Violations",
-      predicted_accidents_next_q: 37,
-      severity_forecast: "High Velocity Crash Impact Probability"
+    peak_risk: {
+      time_range: "22:00 – 04:00",
+      description: "High speed airport express travel window",
+      hourly_bars: [
+        { label: "6PM", value: 30 },
+        { label: "7PM", value: 45 },
+        { label: "8PM", value: 60 },
+        { label: "9PM", value: 75 },
+        { label: "10PM", value: 90 },
+        { label: "11PM", value: 98 },
+        { label: "12AM", value: 95 },
+        { label: "1AM", value: 88 },
+        { label: "2AM", value: 70 },
+        { label: "3AM", value: 60 },
+        { label: "4AM", value: 40 },
+        { label: "5AM", value: 25 },
+        { label: "6AM", value: 35 }
+      ]
+    },
+    ai_prediction: {
+      risk_level: "High Risk",
+      confidence: "89% confidence",
+      expected_crashes: "~30–38 crashes expected",
+      context: "without deceleration traps.",
+      trend_points: [16, 20, 24, 28, 33, 39]
     },
     interventions: [
       {
+        id: "INT-04",
         rank: 1,
-        title: "Dynamic Radar Speed Display (DRSD) & Automated ANPR Radar",
-        category: "Enforcement AI",
-        cost_inr_lakhs: 16,
-        estimated_lives_saved_yearly: 10,
-        accident_reduction_pct: 42,
-        timeframe: "2 Weeks"
+        title: "Dynamic Radar Speed Displays (DRSD)",
+        subtitle: "Automated variable speed warnings",
+        category: "Enforcement",
+        cost: "₹ 24 Lakhs",
+        cost_num: 24,
+        reduction: "-34%",
+        reduction_num: 34,
+        lives_saved: "+8",
+        lives_num: 8,
+        risk_score_impact: 16,
+        timeframe: "2-3 weeks"
       },
       {
+        id: "INT-05",
         rank: 2,
-        title: "High-Friction Anti-Skid Surface Dressing on Curved Ramp",
+        title: "High-Friction Anti-Skid Surfacing",
+        subtitle: "On flyover curve descents",
         category: "Infrastructure",
-        cost_inr_lakhs: 22,
-        estimated_lives_saved_yearly: 5,
-        accident_reduction_pct: 24,
-        timeframe: "3 Weeks"
+        cost: "₹ 55 Lakhs",
+        cost_num: 55,
+        reduction: "-26%",
+        reduction_num: 26,
+        lives_saved: "+6",
+        lives_num: 6,
+        risk_score_impact: 13,
+        timeframe: "4 weeks"
       },
       {
+        id: "INT-06",
         rank: 3,
-        title: "LED Solar Chevron Flashers along Curve Perimeter",
-        category: "Signage & Visibility",
-        cost_inr_lakhs: 5,
-        estimated_lives_saved_yearly: 3,
-        accident_reduction_pct: 14,
-        timeframe: "4 Days"
+        title: "Reflective Crash Cushion Attenuators",
+        subtitle: "At Y-junction bifurcation",
+        category: "Safety Hardware",
+        cost: "₹ 16 Lakhs",
+        cost_num: 16,
+        reduction: "-19%",
+        reduction_num: 19,
+        lives_saved: "+4",
+        lives_num: 4,
+        risk_score_impact: 9,
+        timeframe: "1 week"
       }
     ]
   },
   {
     id: "BLR-003",
-    name: "Tin Factory (KR Puram - Old Madras Road)",
-    location: "Old Madras Road - Outer Ring Road Merge",
-    corridor_type: "Multi-Modal Bottleneck Corridor",
-    latitude: 12.9972,
-    longitude: 77.6698,
-    risk_score: 96,
-    risk_level: "Critical",
-    accident_count_2023: 167,
-    fatalities_2023: 29,
-    injuries_2023: 145,
-    primary_cause: "Pedestrian Surface Crossing & Heavy Truck Congestion",
-    causes_breakdown: [
-      { factor: "Pedestrians Crossing Busy National Highway", percentage: 48 },
-      { factor: "Heavy Commercial Truck Blind Spots", percentage: 32 },
-      { factor: "Bottleneck Squeeze under Railway Bridge", percentage: 20 }
+    name: "Tin Factory Junction",
+    corridor_name: "Old Madras Road",
+    location: "K.R. Puram Old Madras Rd Chokepoint, Bengaluru",
+    highway: "NH 75",
+    latitude: 12.9942,
+    longitude: 77.6658,
+    risk_score: 82,
+    risk_tier: "Critical",
+    status_tag: "CRITICAL RISK",
+    image: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80",
+    banner_image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=85",
+    stats_2023: {
+      crashes: 96,
+      crashes_yoy: "+19% vs. 2022",
+      deaths: 17,
+      deaths_yoy: "+15% vs. 2022",
+      injuries: 71,
+      injuries_yoy: "+12% vs. 2022"
+    },
+    percentile_rank: "Top 3% pedestrian & commuter interchange casualty zone",
+    why_it_happens: [
+      { factor: "Unregulated Bus Stoppages", percentage: 46, color: "#EF4444" },
+      { factor: "Commuter Foot-Traffic Overflow", percentage: 35, color: "#F97316" },
+      { factor: "Auto Queue Spillover", percentage: 19, color: "#94A3B8" }
     ],
     vulnerable_groups: [
-      { group: "Pedestrians", share: 54 },
-      { group: "Two-Wheelers", share: 38 },
-      { group: "Auto-Rickshaws", share: 8 }
+      { group: "Pedestrians", percentage: 54, icon: "pedestrian", color: "#EF4444" },
+      { group: "Two-Wheelers", percentage: 34, icon: "bike", color: "#F97316" },
+      { group: "Auto-Rickshaws", percentage: 10, icon: "car", color: "#64748B" },
+      { group: "Public Transport", percentage: 2, icon: "bus", color: "#94A3B8" }
     ],
-    peak_risk_hours: "07:30 - 11:30 & 17:30 - 22:30",
-    future_prediction: {
-      quarterly_trend: "+22% Congestion Impact Spike",
-      predicted_accidents_next_q: 51,
-      severity_forecast: "Critical Pedestrian Casualties Forecasted"
+    peak_risk: {
+      time_range: "19:00 – 23:30",
+      description: "Evening transit interchange rush hours",
+      hourly_bars: [
+        { label: "6PM", value: 60 },
+        { label: "7PM", value: 85 },
+        { label: "8PM", value: 95 },
+        { label: "9PM", value: 90 },
+        { label: "10PM", value: 75 },
+        { label: "11PM", value: 50 },
+        { label: "12AM", value: 35 },
+        { label: "1AM", value: 25 },
+        { label: "2AM", value: 15 },
+        { label: "3AM", value: 10 },
+        { label: "4AM", value: 15 },
+        { label: "5AM", value: 30 },
+        { label: "6AM", value: 55 }
+      ]
+    },
+    ai_prediction: {
+      risk_level: "High Risk",
+      confidence: "84% confidence",
+      expected_crashes: "~25–32 crashes expected",
+      context: "without dedicated bus bays.",
+      trend_points: [14, 17, 21, 25, 29, 34]
     },
     interventions: [
       {
+        id: "INT-07",
         rank: 1,
-        title: "Grade-Separated Pedestrian Skywalk with High Barricading",
+        title: "Dedicated Off-Street BMTC Bus Bays",
+        subtitle: "Separated from through-traffic",
         category: "Infrastructure",
-        cost_inr_lakhs: 50,
-        estimated_lives_saved_yearly: 14,
-        accident_reduction_pct: 49,
-        timeframe: "2 Months"
+        cost: "₹ 50 Lakhs",
+        cost_num: 50,
+        reduction: "-36%",
+        reduction_num: 36,
+        lives_saved: "+7",
+        lives_num: 7,
+        risk_score_impact: 17,
+        timeframe: "4-6 weeks"
       },
       {
+        id: "INT-08",
         rank: 2,
-        title: "Dedicated Bus Bay & Segregated NMT Micro-Lane",
+        title: "Raised Mid-Block Zebra Crossings",
+        subtitle: "With pedestrian-actuated sensors",
         category: "Traffic Engineering",
-        cost_inr_lakhs: 18,
-        estimated_lives_saved_yearly: 7,
-        accident_reduction_pct: 27,
-        timeframe: "3 Weeks"
+        cost: "₹ 12 Lakhs",
+        cost_num: 12,
+        reduction: "-24%",
+        reduction_num: 24,
+        lives_saved: "+5",
+        lives_num: 5,
+        risk_score_impact: 12,
+        timeframe: "1-2 weeks"
       },
       {
+        id: "INT-09",
         rank: 3,
-        title: "Illuminated Zebra Crossing with Sensor Beacons",
-        category: "Signage & Visibility",
-        cost_inr_lakhs: 6,
-        estimated_lives_saved_yearly: 4,
-        accident_reduction_pct: 16,
-        timeframe: "1 Week"
+        title: "Pedestrian Guard Rails & Fencing",
+        subtitle: "Continuous along 600m curb",
+        category: "Infrastructure",
+        cost: "₹ 15 Lakhs",
+        cost_num: 15,
+        reduction: "-18%",
+        reduction_num: 18,
+        lives_saved: "+3",
+        lives_num: 3,
+        risk_score_impact: 8,
+        timeframe: "2 weeks"
       }
     ]
   },
   {
     id: "BLR-004",
-    name: "Goraguntepalya (Tumkur Road Junction)",
-    location: "NH-48 / Outer Ring Road Crossing, Yeshwanthpur",
-    corridor_type: "National Highway Arterial",
+    name: "Goraguntepalya",
+    corridor_name: "Tumkur Road",
+    location: "Tumkur Road / Outer Ring Rd Junction, Bengaluru",
+    highway: "NH 48",
     latitude: 13.0285,
-    longitude: 77.5408,
-    risk_score: 89,
-    risk_level: "Critical",
-    accident_count_2023: 115,
-    fatalities_2023: 19,
-    injuries_2023: 92,
-    primary_cause: "Intercity Freight Trucks vs Local Two-Wheelers",
-    causes_breakdown: [
-      { factor: "Intercity Heavy Truck Blind Turning & Speeding", percentage: 50 },
-      { factor: "Two-Wheeler Cut-ins at Flyover Entrance", percentage: 30 },
-      { factor: "Poor Street Lighting near Metro Piers", percentage: 20 }
+    longitude: 77.5407,
+    risk_score: 78,
+    risk_tier: "High",
+    status_tag: "HIGH RISK",
+    image: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80",
+    banner_image: "https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=1200&q=85",
+    stats_2023: {
+      crashes: 89,
+      crashes_yoy: "+14% vs. 2022",
+      deaths: 14,
+      deaths_yoy: "+10% vs. 2022",
+      injuries: 62,
+      injuries_yoy: "+8% vs. 2022"
+    },
+    percentile_rank: "Major freight & inter-district passenger conflict junction",
+    why_it_happens: [
+      { factor: "Heavy Multi-Axle Truck Merging", percentage: 44, color: "#F97316" },
+      { factor: "Poor Underpass Illumination", percentage: 32, color: "#FBBF24" },
+      { factor: "Pedestrian Crossing on NH", percentage: 24, color: "#94A3B8" }
     ],
     vulnerable_groups: [
-      { group: "Two-Wheelers", share: 56 },
-      { group: "Pedestrians", share: 28 },
-      { group: "Truck Drivers", share: 16 }
+      { group: "Two-Wheelers", percentage: 55, icon: "bike", color: "#EF4444" },
+      { group: "Pedestrians", percentage: 28, icon: "pedestrian", color: "#F97316" },
+      { group: "Four-Wheelers", percentage: 12, icon: "car", color: "#64748B" },
+      { group: "Public Transport", percentage: 5, icon: "bus", color: "#94A3B8" }
     ],
-    peak_risk_hours: "22:00 - 03:30 (Freight Transport Peak)",
-    future_prediction: {
-      quarterly_trend: "+9% Night Crash Probability",
-      predicted_accidents_next_q: 32,
-      severity_forecast: "Elevated Night Fatality Risk"
+    peak_risk: {
+      time_range: "23:00 – 03:30",
+      description: "Inter-state truck entry hours",
+      hourly_bars: [
+        { label: "6PM", value: 35 },
+        { label: "7PM", value: 50 },
+        { label: "8PM", value: 65 },
+        { label: "9PM", value: 75 },
+        { label: "10PM", value: 85 },
+        { label: "11PM", value: 92 },
+        { label: "12AM", value: 95 },
+        { label: "1AM", value: 88 },
+        { label: "2AM", value: 78 },
+        { label: "3AM", value: 60 },
+        { label: "4AM", value: 40 },
+        { label: "5AM", value: 25 },
+        { label: "6AM", value: 30 }
+      ]
+    },
+    ai_prediction: {
+      risk_level: "High Risk",
+      confidence: "82% confidence",
+      expected_crashes: "~22–28 crashes expected",
+      context: "during commercial freight hours.",
+      trend_points: [12, 15, 18, 22, 26, 30]
     },
     interventions: [
       {
+        id: "INT-10",
         rank: 1,
-        title: "Multi-Beam ANPR Speed & Lane-Violation Cameras",
-        category: "Enforcement AI",
-        cost_inr_lakhs: 15,
-        estimated_lives_saved_yearly: 8,
-        accident_reduction_pct: 36,
-        timeframe: "2 Weeks"
+        title: "Underpass High-Mast LED Lighting",
+        subtitle: "Floodlighting blind corners",
+        category: "Infrastructure",
+        cost: "₹ 18 Lakhs",
+        cost_num: 18,
+        reduction: "-30%",
+        reduction_num: 30,
+        lives_saved: "+6",
+        lives_num: 6,
+        risk_score_impact: 15,
+        timeframe: "1-2 weeks"
       },
       {
+        id: "INT-11",
         rank: 2,
-        title: "Retrofit High-Mast LED Lighting & Warning Prism Signs",
-        category: "Visibility",
-        cost_inr_lakhs: 9,
-        estimated_lives_saved_yearly: 5,
-        accident_reduction_pct: 22,
-        timeframe: "10 Days"
+        title: "Truck Speed Limiter Enforcement",
+        subtitle: "Fixed radar speed gantries",
+        category: "Enforcement",
+        cost: "₹ 28 Lakhs",
+        cost_num: 28,
+        reduction: "-22%",
+        reduction_num: 22,
+        lives_saved: "+4",
+        lives_num: 4,
+        risk_score_impact: 11,
+        timeframe: "3 weeks"
       },
       {
+        id: "INT-12",
         rank: 3,
-        title: "Thermoplastic Transverse Rumble Strips at Highway Merge",
+        title: "Illuminated Bollard Lane Dividers",
+        subtitle: "Physical separation of 2-wheelers",
         category: "Traffic Engineering",
-        cost_inr_lakhs: 4,
-        estimated_lives_saved_yearly: 3,
-        accident_reduction_pct: 15,
-        timeframe: "3 Days"
+        cost: "₹ 14 Lakhs",
+        cost_num: 14,
+        reduction: "-16%",
+        reduction_num: 16,
+        lives_saved: "+3",
+        lives_num: 3,
+        risk_score_impact: 8,
+        timeframe: "1 week"
       }
     ]
   },
   {
     id: "BLR-005",
-    name: "Outer Ring Road - Marathahalli Bridge",
-    location: "ORR Marathahalli Underpass & Multiplex Junction",
-    corridor_type: "IT Corridor Ring Road",
+    name: "Marathahalli Junction",
+    corridor_name: "Outer Ring Road",
+    location: "ORR Tech Corridor, Marathahalli, Bengaluru",
+    highway: "ORR",
     latitude: 12.9562,
-    longitude: 77.7011,
-    risk_score: 85,
-    risk_level: "High",
-    accident_count_2023: 98,
-    fatalities_2023: 14,
-    injuries_2023: 82,
-    primary_cause: "U-turn Collision & High Speed Between Signals",
-    causes_breakdown: [
-      { factor: "Sudden Braking near Unregulated U-Turn Openings", percentage: 45 },
-      { factor: "Overspeeding Late Night Tech Commute", percentage: 35 },
-      { factor: "Pavement Rutting & Waterlogging in Rains", percentage: 20 }
+    longitude: 77.7019,
+    risk_score: 76,
+    risk_tier: "High",
+    status_tag: "HIGH RISK",
+    image: "https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=800&q=80",
+    banner_image: "https://images.unsplash.com/photo-1545459720-aac8509eb02c?auto=format&fit=crop&w=1200&q=85",
+    stats_2023: {
+      crashes: 84,
+      crashes_yoy: "+11% vs. 2022",
+      deaths: 12,
+      deaths_yoy: "+8% vs. 2022",
+      injuries: 59,
+      injuries_yoy: "+7% vs. 2022"
+    },
+    percentile_rank: "Tech park commute corridor with peak evening cab/bike collision density",
+    why_it_happens: [
+      { factor: "U-Turn Chaos & Cab Halting", percentage: 41, color: "#F97316" },
+      { factor: "Service Road Merging Conflicts", percentage: 35, color: "#FBBF24" },
+      { factor: "Jaywalking Tech Park Staff", percentage: 24, color: "#94A3B8" }
     ],
     vulnerable_groups: [
-      { group: "Two-Wheelers", share: 58 },
-      { group: "Cars / Cabs", share: 30 },
-      { group: "Pedestrians", share: 12 }
+      { group: "Two-Wheelers", percentage: 58, icon: "bike", color: "#EF4444" },
+      { group: "Pedestrians", percentage: 27, icon: "pedestrian", color: "#F97316" },
+      { group: "Four-Wheelers", percentage: 11, icon: "car", color: "#64748B" },
+      { group: "Public Transport", percentage: 4, icon: "bus", color: "#94A3B8" }
     ],
-    peak_risk_hours: "20:00 - 01:00",
-    future_prediction: {
-      quarterly_trend: "+15% Wet-Weather Skid Frequency",
-      predicted_accidents_next_q: 28,
-      severity_forecast: "Rear-End Multi-Vehicle Collisions"
+    peak_risk: {
+      time_range: "20:30 – 01:00",
+      description: "Late evening tech park shift releases",
+      hourly_bars: [
+        { label: "6PM", value: 45 },
+        { label: "7PM", value: 65 },
+        { label: "8PM", value: 80 },
+        { label: "9PM", value: 92 },
+        { label: "10PM", value: 95 },
+        { label: "11PM", value: 85 },
+        { label: "12AM", value: 70 },
+        { label: "1AM", value: 50 },
+        { label: "2AM", value: 30 },
+        { label: "3AM", value: 20 },
+        { label: "4AM", value: 15 },
+        { label: "5AM", value: 25 },
+        { label: "6AM", value: 40 }
+      ]
+    },
+    ai_prediction: {
+      risk_level: "High Risk",
+      confidence: "80% confidence",
+      expected_crashes: "~20–25 crashes expected",
+      context: "without automated U-turn signals.",
+      trend_points: [11, 14, 17, 20, 23, 27]
     },
     interventions: [
       {
+        id: "INT-13",
         rank: 1,
-        title: "Geometric Redesign of Median U-Turn with Deceleration Bay",
-        category: "Infrastructure",
-        cost_inr_lakhs: 25,
-        estimated_lives_saved_yearly: 6,
-        accident_reduction_pct: 34,
-        timeframe: "1 Month"
+        title: "Smart Synchronized U-Turn Signals",
+        subtitle: "Eliminating free-flowing merges",
+        category: "Traffic Engineering",
+        cost: "₹ 22 Lakhs",
+        cost_num: 22,
+        reduction: "-32%",
+        reduction_num: 32,
+        lives_saved: "+5",
+        lives_num: 5,
+        risk_score_impact: 14,
+        timeframe: "2 weeks"
       },
       {
+        id: "INT-14",
         rank: 2,
-        title: "Variable Message Signs (VMS) with Live Weather Warnings",
-        category: "Intelligent Transport",
-        cost_inr_lakhs: 12,
-        estimated_lives_saved_yearly: 4,
-        accident_reduction_pct: 21,
-        timeframe: "2 Weeks"
+        title: "Elevated Foot-Over-Bridge (FOB)",
+        subtitle: "Between tech campuses & bus stop",
+        category: "Infrastructure",
+        cost: "₹ 48 Lakhs",
+        cost_num: 48,
+        reduction: "-25%",
+        reduction_num: 25,
+        lives_saved: "+4",
+        lives_num: 4,
+        risk_score_impact: 11,
+        timeframe: "8 weeks"
       },
       {
+        id: "INT-15",
         rank: 3,
-        title: "Surface Milling & Micro-Surfacing for Skid Resistance",
-        category: "Road Maintenance",
-        cost_inr_lakhs: 14,
-        estimated_lives_saved_yearly: 3,
-        accident_reduction_pct: 17,
-        timeframe: "10 Days"
+        title: "Dedicated Cab Pick-up/Drop-off Bays",
+        subtitle: "Behind service road curbs",
+        category: "Infrastructure",
+        cost: "₹ 16 Lakhs",
+        cost_num: 16,
+        reduction: "-17%",
+        reduction_num: 17,
+        lives_saved: "+3",
+        lives_num: 3,
+        risk_score_impact: 7,
+        timeframe: "3 weeks"
       }
     ]
   },
   {
     id: "BLR-006",
-    name: "Electronic City Elevated Highway Entry",
-    location: "Hosur Road NH-44, Electronic City Phase 1",
-    corridor_type: "Elevated Expressway Portal",
-    latitude: 12.8452,
-    longitude: 77.6602,
-    risk_score: 83,
-    risk_level: "High",
-    accident_count_2023: 89,
-    fatalities_2023: 13,
-    injuries_2023: 74,
-    primary_cause: "High-Speed Toll Plaza Merge & Abrupt Lane Splitting",
-    causes_breakdown: [
-      { factor: "Speed Differential between Express Highway and Service Road", percentage: 52 },
-      { factor: "Sudden Lane Switching at Ramp Entrances", percentage: 31 },
-      { factor: "Driver Fatigue on Highway Approach", percentage: 17 }
+    name: "KR Puram",
+    corridor_name: "Old Madras Road",
+    location: "K.R. Puram Hanging Bridge & Junction, Bengaluru",
+    highway: "NH 75",
+    latitude: 13.0012,
+    longitude: 77.6963,
+    risk_score: 72,
+    risk_tier: "High",
+    status_tag: "HIGH RISK",
+    image: "https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=800&q=80",
+    banner_image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=85",
+    stats_2023: {
+      crashes: 79,
+      crashes_yoy: "+9% vs. 2022",
+      deaths: 11,
+      deaths_yoy: "+6% vs. 2022",
+      injuries: 53,
+      injuries_yoy: "+5% vs. 2022"
+    },
+    percentile_rank: "Critical Eastern gateway bottleneck connecting NH 75 and ORR",
+    why_it_happens: [
+      { factor: "Bridge Ramp Confluence Weaving", percentage: 39, color: "#F97316" },
+      { factor: "Pedestrian Transit Interchange", percentage: 36, color: "#FBBF24" },
+      { factor: "Heavy Commercial Vehicles", percentage: 25, color: "#94A3B8" }
     ],
     vulnerable_groups: [
-      { group: "Two-Wheelers", share: 50 },
-      { group: "Cars / SUVs", share: 38 },
-      { group: "Buses", share: 12 }
+      { group: "Two-Wheelers", percentage: 48, icon: "bike", color: "#EF4444" },
+      { group: "Pedestrians", percentage: 38, icon: "pedestrian", color: "#F97316" },
+      { group: "Four-Wheelers", percentage: 10, icon: "car", color: "#64748B" },
+      { group: "Public Transport", percentage: 4, icon: "bus", color: "#94A3B8" }
     ],
-    peak_risk_hours: "00:00 - 05:00 & 18:00 - 20:30",
-    future_prediction: {
-      quarterly_trend: "+8% High-Speed Crash Frequency",
-      predicted_accidents_next_q: 25,
-      severity_forecast: "Elevated Severe Impact Injury Probability"
+    peak_risk: {
+      time_range: "21:00 – 01:00",
+      description: "Late evening truck and bus junction choke",
+      hourly_bars: [
+        { label: "6PM", value: 50 },
+        { label: "7PM", value: 70 },
+        { label: "8PM", value: 85 },
+        { label: "9PM", value: 90 },
+        { label: "10PM", value: 88 },
+        { label: "11PM", value: 80 },
+        { label: "12AM", value: 65 },
+        { label: "1AM", value: 45 },
+        { label: "2AM", value: 30 },
+        { label: "3AM", value: 20 },
+        { label: "4AM", value: 15 },
+        { label: "5AM", value: 25 },
+        { label: "6AM", value: 45 }
+      ]
+    },
+    ai_prediction: {
+      risk_level: "High Risk",
+      confidence: "78% confidence",
+      expected_crashes: "~18–24 crashes expected",
+      context: "without junction lane re-engineering.",
+      trend_points: [10, 12, 15, 18, 22, 25]
     },
     interventions: [
       {
+        id: "INT-16",
         rank: 1,
-        title: "Point-to-Point Average Speed Radar Enforcement",
-        category: "Enforcement AI",
-        cost_inr_lakhs: 20,
-        estimated_lives_saved_yearly: 7,
-        accident_reduction_pct: 39,
-        timeframe: "3 Weeks"
+        title: "Pedestrian Subway / Walkway Redesign",
+        subtitle: "Direct integration with metro & railway",
+        category: "Infrastructure",
+        cost: "₹ 60 Lakhs",
+        cost_num: 60,
+        reduction: "-35%",
+        reduction_num: 35,
+        lives_saved: "+6",
+        lives_num: 6,
+        risk_score_impact: 15,
+        timeframe: "10 weeks"
       },
       {
+        id: "INT-17",
         rank: 2,
-        title: "Crash-Attenuating Energy Absorbing Water/Sand Cushions",
-        category: "Infrastructure Safety",
-        cost_inr_lakhs: 11,
-        estimated_lives_saved_yearly: 4,
-        accident_reduction_pct: 23,
-        timeframe: "1 Week"
+        title: "Ramp Speed Attenuators & Rumble Strips",
+        subtitle: "Prior to hanging bridge merge",
+        category: "Safety Hardware",
+        cost: "₹ 10 Lakhs",
+        cost_num: 10,
+        reduction: "-20%",
+        reduction_num: 20,
+        lives_saved: "+3",
+        lives_num: 3,
+        risk_score_impact: 9,
+        timeframe: "1 week"
       },
       {
+        id: "INT-18",
         rank: 3,
-        title: "High-Visibility Fluorescent Warning Portal Gantries",
-        category: "Signage",
-        cost_inr_lakhs: 7,
-        estimated_lives_saved_yearly: 2,
-        accident_reduction_pct: 14,
-        timeframe: "5 Days"
+        title: "Automatic Number Plate Recognition (ANPR)",
+        subtitle: "For reckless lane cutting enforcement",
+        category: "Enforcement",
+        cost: "₹ 20 Lakhs",
+        cost_num: 20,
+        reduction: "-18%",
+        reduction_num: 18,
+        lives_saved: "+3",
+        lives_num: 3,
+        risk_score_impact: 8,
+        timeframe: "2 weeks"
       }
     ]
   },
   {
     id: "BLR-007",
-    name: "Kengeri Satellite Town (Mysore Road)",
-    location: "Mysore Road SH-17 / Expressway Link",
-    corridor_type: "Intercity Arterial Corridor",
-    latitude: 12.9100,
-    longitude: 77.4837,
-    risk_score: 87,
-    risk_level: "Critical",
-    accident_count_2023: 104,
-    fatalities_2023: 17,
-    injuries_2023: 89,
-    primary_cause: "Transit Terminal Crossing Conflict & Night Speed",
-    causes_breakdown: [
-      { factor: "Unsignalized Crossing for KSRTC/BMTC Buses", percentage: 44 },
-      { factor: "Speed of Intercity Vehicles Entering Urban Limit", percentage: 38 },
-      { factor: "Inadequate Median Barrier Height", percentage: 18 }
+    name: "Electronic City",
+    corridor_name: "Hosur Road",
+    location: "Electronic City Toll Plaza / Elevated Tollway Entrance",
+    highway: "NH 44",
+    latitude: 12.8452,
+    longitude: 77.6602,
+    risk_score: 68,
+    risk_tier: "Medium",
+    status_tag: "MEDIUM RISK",
+    image: "https://images.unsplash.com/photo-1545459720-aac8509eb02c?auto=format&fit=crop&w=800&q=80",
+    banner_image: "https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=1200&q=85",
+    stats_2023: {
+      crashes: 71,
+      crashes_yoy: "+7% vs. 2022",
+      deaths: 10,
+      deaths_yoy: "+4% vs. 2022",
+      injuries: 49,
+      injuries_yoy: "+3% vs. 2022"
+    },
+    percentile_rank: "Elevated expressway toll plaza approach with high speed differential",
+    why_it_happens: [
+      { factor: "Toll Gate Speed Differentials", percentage: 40, color: "#FBBF24" },
+      { factor: "Pedestrian Surface Road Crossing", percentage: 35, color: "#F97316" },
+      { factor: "Motorcycle Tollway Ramp Violations", percentage: 25, color: "#94A3B8" }
     ],
     vulnerable_groups: [
-      { group: "Two-Wheelers", share: 55 },
-      { group: "Pedestrians", share: 33 },
-      { group: "Cars", share: 12 }
+      { group: "Two-Wheelers", percentage: 62, icon: "bike", color: "#EF4444" },
+      { group: "Pedestrians", percentage: 24, icon: "pedestrian", color: "#F97316" },
+      { group: "Four-Wheelers", percentage: 11, icon: "car", color: "#64748B" },
+      { group: "Public Transport", percentage: 3, icon: "bus", color: "#94A3B8" }
     ],
-    peak_risk_hours: "06:00 - 09:00 & 19:00 - 23:00",
-    future_prediction: {
-      quarterly_trend: "+11% Weekend Intercity Traffic Risk",
-      predicted_accidents_next_q: 30,
-      severity_forecast: "Bus-Pedestrian Conflict Points Critical"
+    peak_risk: {
+      time_range: "22:00 – 02:00",
+      description: "Night expressway return speeds",
+      hourly_bars: [
+        { label: "6PM", value: 35 },
+        { label: "7PM", value: 50 },
+        { label: "8PM", value: 65 },
+        { label: "9PM", value: 78 },
+        { label: "10PM", value: 85 },
+        { label: "11PM", value: 88 },
+        { label: "12AM", value: 75 },
+        { label: "1AM", value: 60 },
+        { label: "2AM", value: 45 },
+        { label: "3AM", value: 25 },
+        { label: "4AM", value: 15 },
+        { label: "5AM", value: 20 },
+        { label: "6AM", value: 35 }
+      ]
+    },
+    ai_prediction: {
+      risk_level: "Moderate Risk",
+      confidence: "81% confidence",
+      expected_crashes: "~15–20 crashes expected",
+      context: "without speed radar calming.",
+      trend_points: [9, 11, 13, 16, 19, 22]
     },
     interventions: [
       {
+        id: "INT-19",
         rank: 1,
-        title: "Adaptive Traffic Signal Control (ATSC) with Bus-Priority Sensing",
-        category: "Smart Signals",
-        cost_inr_lakhs: 28,
-        estimated_lives_saved_yearly: 7,
-        accident_reduction_pct: 35,
-        timeframe: "1 Month"
+        title: "Toll Approach Speed Tables & Rumble Strips",
+        subtitle: "Staged deceleration strips",
+        category: "Safety Hardware",
+        cost: "₹ 15 Lakhs",
+        cost_num: 15,
+        reduction: "-28%",
+        reduction_num: 28,
+        lives_saved: "+4",
+        lives_num: 4,
+        risk_score_impact: 12,
+        timeframe: "1 week"
       },
       {
+        id: "INT-20",
         rank: 2,
-        title: "Continuous Anti-Dazzle Median Fence to Prevent Jaywalking",
+        title: "High-Mast Surface Street Illumination",
+        subtitle: "Covering dark toll bypass lanes",
         category: "Infrastructure",
-        cost_inr_lakhs: 15,
-        estimated_lives_saved_yearly: 5,
-        accident_reduction_pct: 26,
-        timeframe: "2 Weeks"
+        cost: "₹ 20 Lakhs",
+        cost_num: 20,
+        reduction: "-21%",
+        reduction_num: 21,
+        lives_saved: "+3",
+        lives_num: 3,
+        risk_score_impact: 9,
+        timeframe: "2 weeks"
       },
       {
+        id: "INT-21",
         rank: 3,
-        title: "Raised Tabletop Pedestrian Crossing with Solar Studs",
-        category: "Traffic Calming",
-        cost_inr_lakhs: 5,
-        estimated_lives_saved_yearly: 3,
-        accident_reduction_pct: 18,
-        timeframe: "4 Days"
+        title: "Automated Barrier for 2-Wheeler Ramp Prevention",
+        subtitle: "Preventing illegal elevated highway entry",
+        category: "Enforcement",
+        cost: "₹ 12 Lakhs",
+        cost_num: 12,
+        reduction: "-15%",
+        reduction_num: 15,
+        lives_saved: "+2",
+        lives_num: 2,
+        risk_score_impact: 7,
+        timeframe: "2 weeks"
       }
     ]
   },
   {
     id: "BLR-008",
-    name: "Kadugodi Flyover & Hope Farm Junction",
-    location: "Whitefield - Hoskote Main Road",
-    corridor_type: "Suburban Arterial Road",
-    latitude: 12.9850,
-    longitude: 77.7610,
-    risk_score: 79,
-    risk_level: "High",
-    accident_count_2023: 76,
-    fatalities_2023: 11,
-    injuries_2023: 62,
-    primary_cause: "Construction Dumpers & Low Visibility Under Flyover",
-    causes_breakdown: [
-      { factor: "Construction Material Dumpers Blind Spots", percentage: 46 },
-      { factor: "Absence of Street Lighting along Railway Edge", percentage: 34 },
-      { factor: "Unpaved Shoulder inducing Two-Wheeler Skids", percentage: 20 }
+    name: "Yeshwanthpur",
+    corridor_name: "Tumkur Road",
+    location: "Yeshwanthpur Circle / Railway Station Corridor",
+    highway: "NH 48",
+    latitude: 13.0223,
+    longitude: 77.5528,
+    risk_score: 64,
+    risk_tier: "Medium",
+    status_tag: "MEDIUM RISK",
+    image: "https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=800&q=80",
+    banner_image: "https://images.unsplash.com/photo-1545459720-aac8509eb02c?auto=format&fit=crop&w=1200&q=85",
+    stats_2023: {
+      crashes: 66,
+      crashes_yoy: "+5% vs. 2022",
+      deaths: 9,
+      deaths_yoy: "+3% vs. 2022",
+      injuries: 43,
+      injuries_yoy: "+4% vs. 2022"
+    },
+    percentile_rank: "Multimodal hub with heavy market, rail, and metro passenger crossover",
+    why_it_happens: [
+      { factor: "Market Loading Spillover", percentage: 42, color: "#FBBF24" },
+      { factor: "Station Foot-Traffic Crossings", percentage: 36, color: "#F97316" },
+      { factor: "Rickshaw/Cab Curb Parking", percentage: 22, color: "#94A3B8" }
     ],
     vulnerable_groups: [
-      { group: "Two-Wheelers", share: 64 },
-      { group: "Pedestrians", share: 24 },
-      { group: "Goods Vehicles", share: 12 }
+      { group: "Pedestrians", percentage: 49, icon: "pedestrian", color: "#EF4444" },
+      { group: "Two-Wheelers", percentage: 41, icon: "bike", color: "#F97316" },
+      { group: "Auto-Rickshaws", percentage: 7, icon: "car", color: "#64748B" },
+      { group: "Public Transport", percentage: 3, icon: "bus", color: "#94A3B8" }
     ],
-    peak_risk_hours: "20:30 - 02:00 (Heavy Vehicle Entry)",
-    future_prediction: {
-      quarterly_trend: "+16% Night Heavy Vehicle Crashes",
-      predicted_accidents_next_q: 22,
-      severity_forecast: "Heavy Vehicle Rollover Risk in Rainy Period"
+    peak_risk: {
+      time_range: "18:30 – 22:30",
+      description: "Wholesale APMC market loading and evening passenger trains",
+      hourly_bars: [
+        { label: "6PM", value: 65 },
+        { label: "7PM", value: 85 },
+        { label: "8PM", value: 90 },
+        { label: "9PM", value: 80 },
+        { label: "10PM", value: 65 },
+        { label: "11PM", value: 45 },
+        { label: "12AM", value: 30 },
+        { label: "1AM", value: 20 },
+        { label: "2AM", value: 15 },
+        { label: "3AM", value: 15 },
+        { label: "4AM", value: 25 },
+        { label: "5AM", value: 45 },
+        { label: "6AM", value: 60 }
+      ]
+    },
+    ai_prediction: {
+      risk_level: "Moderate Risk",
+      confidence: "79% confidence",
+      expected_crashes: "~14–18 crashes expected",
+      context: "without market loading regulation.",
+      trend_points: [8, 10, 12, 15, 17, 20]
     },
     interventions: [
       {
+        id: "INT-22",
         rank: 1,
-        title: "Commercial Vehicle Time-Restriction Geofencing & Automated Alert",
-        category: "Traffic Policy / AI",
-        cost_inr_lakhs: 9,
-        estimated_lives_saved_yearly: 5,
-        accident_reduction_pct: 32,
-        timeframe: "10 Days"
+        title: "Regulated Market Freight Loading Hours",
+        subtitle: "Night-only loading windows (1 AM - 5 AM)",
+        category: "Enforcement",
+        cost: "₹ 8 Lakhs",
+        cost_num: 8,
+        reduction: "-26%",
+        reduction_num: 26,
+        lives_saved: "+3",
+        lives_num: 3,
+        risk_score_impact: 11,
+        timeframe: "1 week"
       },
       {
+        id: "INT-23",
         rank: 2,
-        title: "Paved Road Shoulder with Bituminous Stabilizer & Drainage",
+        title: "Continuous Pedestrian Skywalk to Metro",
+        subtitle: "Direct skywalk from railway concourse",
         category: "Infrastructure",
-        cost_inr_lakhs: 21,
-        estimated_lives_saved_yearly: 4,
-        accident_reduction_pct: 24,
-        timeframe: "3 Weeks"
+        cost: "₹ 55 Lakhs",
+        cost_num: 55,
+        reduction: "-31%",
+        reduction_num: 31,
+        lives_saved: "+4",
+        lives_num: 4,
+        risk_score_impact: 13,
+        timeframe: "8 weeks"
       },
       {
+        id: "INT-24",
         rank: 3,
-        title: "Smart LED Streetlamp Grid with Ambient Lux Sensors",
-        category: "Lighting Infrastructure",
-        cost_inr_lakhs: 12,
-        estimated_lives_saved_yearly: 3,
-        accident_reduction_pct: 19,
-        timeframe: "2 Weeks"
-      }
-    ]
-  },
-  {
-    id: "BLR-009",
-    name: "Bellandur EcoSpace (Outer Ring Road)",
-    location: "ORR, Between Bellandur and Devarabisanahalli",
-    corridor_type: "High-Density Tech Expressway",
-    latitude: 12.9260,
-    longitude: 77.6834,
-    risk_score: 88,
-    risk_level: "Critical",
-    accident_count_2023: 110,
-    fatalities_2023: 16,
-    injuries_2023: 95,
-    primary_cause: "High-Speed Cab Aggression vs Night Shift Commuters",
-    causes_breakdown: [
-      { factor: "Speeding by Tech-Shuttle Cabs during Off-Peak", percentage: 51 },
-      { factor: "Hazardous Pedestrian Crossings near Tech Parks", percentage: 33 },
-      { factor: "Irregular Road Surface due to Metro Construction", percentage: 16 }
-    ],
-    vulnerable_groups: [
-      { group: "Two-Wheelers", share: 51 },
-      { group: "Pedestrians", share: 34 },
-      { group: "Cabs / Taxis", share: 15 }
-    ],
-    peak_risk_hours: "22:00 - 03:00 & 12:00 - 15:00",
-    future_prediction: {
-      quarterly_trend: "+13% Night Collision Probability",
-      predicted_accidents_next_q: 31,
-      severity_forecast: "High Severity Pedestrian Collisions"
-    },
-    interventions: [
-      {
-        rank: 1,
-        title: "Direct Tech-Park Skywalk Link with Automated Passenger Gates",
-        category: "Infrastructure",
-        cost_inr_lakhs: 42,
-        estimated_lives_saved_yearly: 8,
-        accident_reduction_pct: 40,
-        timeframe: "6 Weeks"
-      },
-      {
-        rank: 2,
-        title: "Speed Enforcement Gantries with Instant SMS Challan Dispatch",
-        category: "Enforcement AI",
-        cost_inr_lakhs: 15,
-        estimated_lives_saved_yearly: 5,
-        accident_reduction_pct: 28,
-        timeframe: "2 Weeks"
-      },
-      {
-        rank: 3,
-        title: "Reflective Hazard Bollards & High-Luminance Cat-Eyes",
-        category: "Signage & Delineation",
-        cost_inr_lakhs: 6,
-        estimated_lives_saved_yearly: 3,
-        accident_reduction_pct: 15,
-        timeframe: "3 Days"
-      }
-    ]
-  },
-  {
-    id: "BLR-010",
-    name: "Nagawara Junction (Outer Ring Road / Thanisandra)",
-    location: "ORR - Thanisandra Main Road Junction",
-    corridor_type: "Urban Arterial Interchange",
-    latitude: 13.0442,
-    longitude: 77.6215,
-    risk_score: 82,
-    risk_level: "High",
-    accident_count_2023: 84,
-    fatalities_2023: 12,
-    injuries_2023: 71,
-    primary_cause: "Flyover Descent Blind Curves & Signal Violations",
-    causes_breakdown: [
-      { factor: "Signal Jumping during Late Night Hours", percentage: 49 },
-      { factor: "Poor Surface Friction in Wet Monsoon Conditions", percentage: 29 },
-      { factor: "Two-Wheeler Encroachment onto Fast Car Lanes", percentage: 22 }
-    ],
-    vulnerable_groups: [
-      { group: "Two-Wheelers", share: 63 },
-      { group: "Pedestrians", share: 22 },
-      { group: "Cars", share: 15 }
-    ],
-    peak_risk_hours: "21:30 - 02:00",
-    future_prediction: {
-      quarterly_trend: "+10% Signal Violation Trend",
-      predicted_accidents_next_q: 24,
-      severity_forecast: "T-Bone Collisions at Unmanned Hours"
-    },
-    interventions: [
-      {
-        rank: 1,
-        title: "Automated Red-Light Violation Detection (RLVD) AI Cameras",
-        category: "Enforcement AI",
-        cost_inr_lakhs: 12,
-        estimated_lives_saved_yearly: 6,
-        accident_reduction_pct: 37,
-        timeframe: "10 Days"
-      },
-      {
-        rank: 2,
-        title: "Resurfacing with Polymer Modified Bitumen for Skid Reduction",
-        category: "Infrastructure",
-        cost_inr_lakhs: 19,
-        estimated_lives_saved_yearly: 4,
-        accident_reduction_pct: 23,
-        timeframe: "2 Weeks"
-      },
-      {
-        rank: 3,
-        title: "Overhead Gantry Signs with Dynamic Lane Guidance",
-        category: "Signage",
-        cost_inr_lakhs: 8,
-        estimated_lives_saved_yearly: 2,
-        accident_reduction_pct: 13,
-        timeframe: "1 Week"
+        title: "High-Visibility Crosswalks with Flashing Studs",
+        subtitle: "Solar LED road studs at crosswalks",
+        category: "Safety Hardware",
+        cost: "₹ 11 Lakhs",
+        cost_num: 11,
+        reduction: "-18%",
+        reduction_num: 18,
+        lives_saved: "+2",
+        lives_num: 2,
+        risk_score_impact: 7,
+        timeframe: "1 week"
       }
     ]
   }
 ];
 
-export const CITY_METRICS = {
-  city: "Bengaluru Metropolitan Region",
-  total_corridors_analyzed: 10,
-  total_accidents_2023: 1013,
-  total_fatalities_2023: 165,
-  critical_zones_count: 5,
-  high_risk_zones_count: 5,
-  avg_risk_score: 87.2,
-  potential_lives_saved_modeled: 68,
-  estimated_economic_loss_prevented_cr: 84.5,
-  vision_zero_2030_target_pct: -50
-};
+// Corridor Routes for GIS Polyline rendering
+export const CORRIDOR_POLYLINES = [
+  {
+    name: "Outer Ring Road (Silk Board to Marathahalli to Hebbal)",
+    risk_level: "Critical",
+    color: "#EF4444",
+    weight: 4,
+    coordinates: [
+      [12.9172, 77.6228], // Silk Board
+      [12.9248, 77.6502], // HSR
+      [12.9279, 77.6834], // Bellandur
+      [12.9352, 77.6947], // Devarabisanahalli
+      [12.9562, 77.7019], // Marathahalli
+      [12.9942, 77.6658], // Tin Factory / KR Puram
+      [13.0180, 77.6320], // Kalyan Nagar
+      [13.0358, 77.5970]  // Hebbal
+    ]
+  },
+  {
+    name: "Hosur Road (Silk Board to Electronic City)",
+    risk_level: "High",
+    color: "#F97316",
+    weight: 4,
+    coordinates: [
+      [12.9172, 77.6228], // Silk Board
+      [12.8980, 77.6380], // Bommanahalli
+      [12.8710, 77.6520], // Kudlu Gate
+      [12.8452, 77.6602]  // Electronic City
+    ]
+  },
+  {
+    name: "Tumkur Road (Goraguntepalya to Yeshwanthpur)",
+    risk_level: "High",
+    color: "#F97316",
+    weight: 4,
+    coordinates: [
+      [13.0450, 77.5250], // Peenya
+      [13.0285, 77.5407], // Goraguntepalya
+      [13.0223, 77.5528]  // Yeshwanthpur
+    ]
+  },
+  {
+    name: "Old Madras Road (Tin Factory to KR Puram)",
+    risk_level: "Critical",
+    color: "#EF4444",
+    weight: 4,
+    coordinates: [
+      [12.9860, 77.6480], // Indiranagar OMR
+      [12.9942, 77.6658], // Tin Factory
+      [13.0012, 77.6963]  // KR Puram
+    ]
+  }
+];

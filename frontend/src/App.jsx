@@ -1,98 +1,121 @@
 import React, { useState, useEffect } from 'react';
-import Navbar from './components/Navbar';
-import CityStats from './components/CityStats';
-import RiskMap from './components/RiskMap';
-import SpotListSidebar from './components/SpotListSidebar';
-import SpotInspector from './components/SpotInspector';
+import SidebarNav from './components/SidebarNav';
+import TopHeader from './components/TopHeader';
+import KpiMetricsRow from './components/KpiMetricsRow';
+import CorridorList from './components/CorridorList';
+import SatelliteRiskMap from './components/SatelliteRiskMap';
+import InspectorDrawer from './components/InspectorDrawer';
+import FooterBar from './components/FooterBar';
+import SearchModal from './components/SearchModal';
+import SimulatorModal from './components/SimulatorModal';
 import { apiService } from './services/api';
 
 export default function App() {
-  const [hotspots, setHotspots] = useState([]);
+  const [corridors, setCorridors] = useState([]);
   const [metrics, setMetrics] = useState(null);
-  const [selectedSpot, setSelectedSpot] = useState(null);
+  const [selectedCorridor, setSelectedCorridor] = useState(null);
+  const [activeNav, setActiveNav] = useState('overview');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [simulatorOpen, setSimulatorOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Load Initial Datasets
   useEffect(() => {
-    async function loadInitialData() {
+    async function loadData() {
       try {
         setLoading(true);
-        const [spotsData, metricsData] = await Promise.all([
-          apiService.getHotspots(),
+        const [corridorsData, metricsData] = await Promise.all([
+          apiService.getCorridors(),
           apiService.getCityMetrics()
         ]);
-        setHotspots(spotsData);
+        setCorridors(corridorsData);
         setMetrics(metricsData);
-        if (spotsData.length > 0) {
-          // Select highest risk spot (Silk Board) by default
-          setSelectedSpot(spotsData[0]);
+        if (corridorsData.length > 0) {
+          // Default selection to Silk Board Junction (highest risk blackspot)
+          setSelectedCorridor(corridorsData[0]);
         }
       } catch (err) {
-        console.error('Failed to load initial road intelligence data:', err);
+        console.error('Failed to load road safety intelligence data:', err);
       } finally {
         setLoading(false);
       }
     }
 
-    loadInitialData();
+    loadData();
   }, []);
 
-  const handleSelectSpot = (spot) => {
-    setSelectedSpot(spot);
-  };
-
-  const handleResetSelection = () => {
-    if (hotspots.length > 0) {
-      setSelectedSpot(hotspots[0]);
-    }
+  const handleSelectCorridor = (corridor) => {
+    setSelectedCorridor(corridor);
   };
 
   return (
-    <div className="app-container">
-      {/* 1. Master Navbar */}
-      <Navbar onResetSelection={handleResetSelection} />
+    <div className="roadsafe-app-root">
+      {/* 1. Global Left Sidebar Navigation */}
+      <SidebarNav 
+        activeNav={activeNav}
+        onSelectNav={setActiveNav}
+        onOpenSimulator={() => setSimulatorOpen(true)}
+      />
 
-      {/* 2. Top City Stats Summary Strip */}
-      <CityStats metrics={metrics} />
-
-      {/* 3. Main Dashboard Workspace (Sidebar + Map + Actionable Inspector) */}
-      <main className="dashboard-grid">
-        {/* Left: Corridor Browser */}
-        <SpotListSidebar 
-          hotspots={hotspots}
-          selectedSpot={selectedSpot}
-          onSelectSpot={handleSelectSpot}
+      {/* 2. Main Content Canvas */}
+      <div className="main-viewport-container">
+        {/* Top Header Bar */}
+        <TopHeader 
+          onOpenSearch={() => setSearchOpen(true)}
         />
 
-        {/* Center: Leaflet Interactive Risk Map */}
-        <section className="map-section">
-          <RiskMap 
-            hotspots={hotspots}
-            selectedSpot={selectedSpot}
-            onSelectSpot={handleSelectSpot}
-          />
-        </section>
+        {/* Scrollable Dashboard Body */}
+        <div className="dashboard-content-scroll">
+          {/* Subheader & 5 KPI Metrics Strip */}
+          <KpiMetricsRow metrics={metrics} />
 
-        {/* Right: PS3 Actionable Intelligence Panel */}
-        <aside className="inspector-section">
-          <SpotInspector 
-            spot={selectedSpot} 
-            onClose={() => setSelectedSpot(null)} 
-          />
-        </aside>
-      </main>
+          {/* 3-Column Core Command Center Grid */}
+          <main className="command-grid-layout">
+            {/* Column 1: Road Corridors List */}
+            <CorridorList 
+              corridors={corridors}
+              selectedCorridor={selectedCorridor}
+              onSelectCorridor={handleSelectCorridor}
+            />
 
-      {/* Footer / Status Bar */}
-      <footer className="footer-bar">
-        <div className="footer-left">
-          <span>Sourced from <strong>MoRTH 2023</strong> & <strong>Bengaluru City Traffic Police Blackspot Audit</strong></span>
+            {/* Column 2: Center Realistic Satellite Map */}
+            <section className="map-view-column">
+              <SatelliteRiskMap 
+                corridors={corridors}
+                selectedCorridor={selectedCorridor}
+                onSelectCorridor={handleSelectCorridor}
+              />
+            </section>
+
+            {/* Column 3: Segment Intelligence Drawer */}
+            <aside className="inspector-view-column">
+              <InspectorDrawer 
+                corridor={selectedCorridor}
+                onOpenSimulator={() => setSimulatorOpen(true)}
+              />
+            </aside>
+          </main>
         </div>
-        <div className="footer-center">
-          <span>AI Model: Gradient Boosting Classifier + Bayesian Impact Optimization (R²: 0.86)</span>
-        </div>
-        <div className="footer-right">
-          <span>IBM Bob Hackathon 2026 • PS3 RoadSafe India</span>
-        </div>
-      </footer>
+
+        {/* Global Footer Telemetry Bar */}
+        <FooterBar />
+      </div>
+
+      {/* Quick Search Palette (⌘K) */}
+      <SearchModal 
+        isOpen={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        corridors={corridors}
+        onSelectCorridor={handleSelectCorridor}
+      />
+
+      {/* Interactive What-If Safety Simulator Modal */}
+      <SimulatorModal 
+        isOpen={simulatorOpen}
+        onClose={() => setSimulatorOpen(false)}
+        corridors={corridors}
+        initialCorridor={selectedCorridor}
+      />
     </div>
   );
 }
