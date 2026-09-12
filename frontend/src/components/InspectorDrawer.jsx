@@ -1,81 +1,163 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Bookmark, 
   Info, 
-  ArrowUpRight, 
-  Clock, 
-  TrendingUp, 
-  Bike, 
-  Footprints, 
-  Car, 
-  Bus,
-  ArrowRight,
-  Sliders,
-  CheckCircle2
+  Bike,
+  Sliders, 
+  ShieldAlert,
+  AlertTriangle,
+  Lightbulb,
+  LightbulbOff,
+  Sparkles,
+  RotateCcw,
+  Building2,
+  Bookmark
 } from 'lucide-react';
 import { apiService } from '../services/api';
 
-export default function InspectorDrawer({ corridor, onOpenSimulator }) {
+export default function InspectorDrawer({ selectedSegmentId, onOpenSimulator }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [bookmarked, setBookmarked] = useState(false);
-  const [activeInterventionIds, setActiveInterventionIds] = useState(['INT-01', 'INT-02']);
+  const [detail, setDetail] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  if (!corridor) return null;
+  // Fetch live segment detail on segmentId change
+  useEffect(() => {
+    if (!selectedSegmentId) {
+      return;
+    }
 
-  const isCritical = corridor.risk_tier === 'Critical';
-  const isHigh = corridor.risk_tier === 'High';
+    let isMounted = true;
+    async function loadSegment() {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await apiService.getSegmentDetail(selectedSegmentId);
+        if (isMounted) {
+          setDetail(data);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err.message || 'Failed to load segment telemetry');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
 
-  let badgeColor = '#EF4444';
-  if (isHigh) badgeColor = '#F97316';
-  if (corridor.risk_tier === 'Medium') badgeColor = '#FBBF24';
+    loadSegment();
 
-  // Semi-circular gauge calculations (circumference for semi-circle)
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedSegmentId]);
+
+  if (!selectedSegmentId) {
+    return (
+      <div className="inspector-drawer-panel empty-selection-panel">
+        <div className="empty-selection-card">
+          <ShieldAlert size={36} className="text-muted empty-icon" />
+          <h3 className="empty-title">No Segment Selected</h3>
+          <p className="empty-desc">
+            Click any 500m road segment on the satellite map or corridor list to inspect real-time safety metrics, crash history, and ML diagnostics.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="inspector-drawer-panel is-loading">
+        <div className="inspector-loading-header skeleton-pulse"></div>
+        <div className="inspector-loading-body">
+          <div className="skeleton-card skeleton-pulse"></div>
+          <div className="skeleton-card skeleton-pulse"></div>
+          <div className="skeleton-card skeleton-pulse"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !detail) {
+    return (
+      <div className="inspector-drawer-panel is-error">
+        <div className="inspector-error-card">
+          <AlertTriangle size={32} className="text-red" />
+          <h3 className="error-title">Telemetry Unavailable</h3>
+          <p className="error-desc">{error || 'Could not fetch segment details from the backend.'}</p>
+          <button 
+            className="error-retry-btn"
+            onClick={() => {
+              setLoading(true);
+              apiService.getSegmentDetail(selectedSegmentId)
+                .then(setDetail)
+                .catch(e => setError(e.message))
+                .finally(() => setLoading(false));
+            }}
+          >
+            <RotateCcw size={14} />
+            <span>Retry Connection</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const { metrics, infrastructure, btp_jurisdiction, risk_explanation, vulnerable_road_users } = detail;
+  const safetyScore = Math.round(metrics?.safety_score || 0);
+  const tier = (metrics?.risk_tier || 'LOW').toUpperCase();
+
+  let badgeColor = '#10B981';
+  if (tier === 'CRITICAL') badgeColor = '#EF4444';
+  else if (tier === 'HIGH') badgeColor = '#F97316';
+  else if (tier === 'MEDIUM') badgeColor = '#FBBF24';
+
+  // Semi-circular gauge math
   const radius = 68;
   const circumference = Math.PI * radius; // ~213.6
-  const strokeDashoffset = circumference - (circumference * corridor.risk_score) / 100;
-
-  // Real-time What-If calculations for the Interventions tab
-  const simulationResult = apiService.simulateInterventions(corridor, activeInterventionIds);
-
-  const toggleIntervention = (id) => {
-    setActiveInterventionIds(prev => 
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
-  };
+  const strokeDashoffset = circumference - (circumference * safetyScore) / 100;
 
   return (
     <div className="inspector-drawer-panel">
-      {/* 1. Top Hero Image Banner */}
-      <div className="inspector-hero-banner">
-        <img 
-          src={corridor.banner_image || corridor.image} 
-          alt={corridor.name} 
-          className="hero-banner-bg"
-          onError={(e) => {
-            e.target.src = 'https://images.unsplash.com/photo-1545459720-aac8509eb02c?auto=format&fit=crop&w=1200&q=85';
-          }}
-        />
-        <div className="hero-banner-gradient"></div>
-
-        {/* Hero Overlay Details */}
-        <div className="hero-overlay-content">
-          <div className="hero-text-block">
-            <h2 className="hero-corridor-title">{corridor.name}</h2>
-            <div className="hero-corridor-subtitle">{corridor.location}</div>
-          </div>
-
-          <div className="hero-actions-right">
-            <span className="hero-critical-badge" style={{ backgroundColor: badgeColor }}>
-              {corridor.status_tag}
+      {/* 1. Header Banner */}
+      <div className="inspector-header-bar">
+        <div className="header-meta-wrap">
+          <div className="header-meta-row">
+            <span className="segment-id-badge">{detail.segment_id}</span>
+            <span className="corridor-tag-badge">{detail.corridor_id}</span>
+            <span className="risk-tier-pill" style={{ backgroundColor: badgeColor }}>
+              {tier} RISK
             </span>
-            <button 
-              className={`hero-bookmark-btn ${bookmarked ? 'active' : ''}`}
-              onClick={() => setBookmarked(!bookmarked)}
-              title="Bookmark corridor for audit"
-            >
-              <Bookmark size={15} fill={bookmarked ? '#2563EB' : 'none'} color={bookmarked ? '#2563EB' : '#475569'} />
-            </button>
           </div>
+
+          <h2 className="inspector-road-title">{detail.road_name || 'Road Segment'}</h2>
+          <div className="inspector-subtitle">
+            <span>{detail.corridor_name}</span>
+            <span className="meta-sep">•</span>
+            <span>{infrastructure?.road_type}</span>
+            <span className="meta-sep">•</span>
+            <span>{metrics?.segment_length_m}m</span>
+          </div>
+
+          {btp_jurisdiction?.station_name && (
+            <div className="police-jurisdiction-chip">
+              <Building2 size={12} className="text-muted" />
+              <span>{btp_jurisdiction.station_name}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="header-actions-group">
+          <button 
+            className={`hero-bookmark-btn ${bookmarked ? 'active' : ''}`}
+            onClick={() => setBookmarked(!bookmarked)}
+            title="Bookmark segment for municipal review"
+          >
+            <Bookmark size={15} fill={bookmarked ? '#2563EB' : 'none'} color={bookmarked ? '#2563EB' : '#64748B'} />
+          </button>
         </div>
       </div>
 
@@ -94,41 +176,35 @@ export default function InspectorDrawer({ corridor, onOpenSimulator }) {
           Risk Factors
         </button>
         <button 
+          className={`inspector-tab-btn ${activeTab === 'infrastructure' ? 'active' : ''}`}
+          onClick={() => setActiveTab('infrastructure')}
+        >
+          Infrastructure
+        </button>
+        <button 
           className={`inspector-tab-btn ${activeTab === 'interventions' ? 'active' : ''}`}
           onClick={() => setActiveTab('interventions')}
         >
           Interventions
         </button>
-        <button 
-          className={`inspector-tab-btn ${activeTab === 'trends' ? 'active' : ''}`}
-          onClick={() => setActiveTab('trends')}
-        >
-          Trends
-        </button>
-        <button 
-          className={`inspector-tab-btn ${activeTab === 'gallery' ? 'active' : ''}`}
-          onClick={() => setActiveTab('gallery')}
-        >
-          Gallery
-        </button>
       </div>
 
       {/* 3. Tab Body Container */}
       <div className="inspector-tab-body">
+        {/* TAB 1: OVERVIEW */}
         {activeTab === 'overview' && (
           <div className="overview-tab-flow">
-            {/* ROW 1: Road Safety Score Gauge + 2023 Statistics */}
+            {/* Safety Score Gauge + BTP Crash Statistics */}
             <div className="gauge-stats-row">
-              {/* Left: Road Safety Score */}
+              {/* Road Safety Score Gauge */}
               <div className="score-gauge-card">
                 <div className="card-section-label">
-                  <span>Road Safety Score</span>
-                  <Info size={13} className="info-hint-icon" title="Calculated from crash frequency, speed, and geometric conflict points" />
+                  <span>ML Safety Score</span>
+                  <Info size={13} className="info-hint-icon" title="Evaluated by trained XGBoost RiskEngine with 21 empirical features" />
                 </div>
 
                 <div className="semi-gauge-visual-wrap">
                   <svg className="semi-gauge-svg" viewBox="0 0 160 95">
-                    {/* Background Track Arc */}
                     <path
                       d="M 12 85 A 68 68 0 0 1 148 85"
                       fill="none"
@@ -136,11 +212,10 @@ export default function InspectorDrawer({ corridor, onOpenSimulator }) {
                       strokeWidth="11"
                       strokeLinecap="round"
                     />
-                    {/* Active Gradient Filled Arc */}
                     <path
                       d="M 12 85 A 68 68 0 0 1 148 85"
                       fill="none"
-                      stroke="url(#gaugeGradient)"
+                      stroke="url(#safetyGaugeGradient)"
                       strokeWidth="11"
                       strokeLinecap="round"
                       strokeDasharray={circumference}
@@ -148,396 +223,242 @@ export default function InspectorDrawer({ corridor, onOpenSimulator }) {
                       style={{ transition: 'stroke-dashoffset 0.8s ease-in-out' }}
                     />
                     <defs>
-                      <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#F97316" />
-                        <stop offset="100%" stopColor="#EF4444" />
+                      <linearGradient id="safetyGaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#EF4444" />
+                        <stop offset="50%" stopColor="#F59E0B" />
+                        <stop offset="100%" stopColor="#10B981" />
                       </linearGradient>
                     </defs>
                   </svg>
 
-                  {/* Big Center Score Number */}
                   <div className="gauge-center-text">
-                    <span className="gauge-score-val">{corridor.risk_score}</span>
+                    <span className="gauge-score-val">{safetyScore}</span>
                     <span className="gauge-scale-max">/ 100</span>
                   </div>
                 </div>
 
                 <div className="gauge-subtext">
-                  {corridor.percentile_rank}
+                  <span>Confidence: <strong>{metrics?.confidence_level}</strong></span>
+                  <span className="bullet-sep">•</span>
+                  <span>Risk Score: {((metrics?.risk_score || 0) * 100).toFixed(1)}%</span>
                 </div>
               </div>
 
-              {/* Right: 2023 Statistics */}
+              {/* BTP Jurisdiction Historical Signals */}
               <div className="year-stats-card">
-                <div className="card-section-label">2023 Statistics</div>
+                <div className="card-section-label">
+                  <span>BTP Jurisdiction History (2023)</span>
+                </div>
                 <div className="stats-triad-grid">
                   <div className="triad-col">
-                    <div className="triad-val">{corridor.stats_2023.crashes}</div>
-                    <div className="triad-lbl">Crashes</div>
-                    <div className="triad-delta text-red">
-                      <ArrowUpRight size={12} />
-                      <span>{corridor.stats_2023.crashes_yoy.split(' ')[0]}</span>
-                    </div>
-                    <div className="triad-period">vs. 2022</div>
+                    <div className="triad-val">{btp_jurisdiction?.historical_signals?.total_crashes_2023 || 0}</div>
+                    <div className="triad-lbl">Total Crashes</div>
+                    <div className="triad-period">Station Area</div>
                   </div>
 
                   <div className="triad-col">
-                    <div className="triad-val text-red">{corridor.stats_2023.deaths}</div>
-                    <div className="triad-lbl">Deaths</div>
-                    <div className="triad-delta text-red">
-                      <ArrowUpRight size={12} />
-                      <span>{corridor.stats_2023.deaths_yoy.split(' ')[0]}</span>
-                    </div>
-                    <div className="triad-period">vs. 2022</div>
+                    <div className="triad-val text-red">{btp_jurisdiction?.historical_signals?.fatalities_2023 || 0}</div>
+                    <div className="triad-lbl">Fatalities</div>
+                    <div className="triad-period">{btp_jurisdiction?.historical_signals?.fatal_crashes_2023 || 0} Fatal</div>
                   </div>
 
                   <div className="triad-col">
-                    <div className="triad-val text-orange">{corridor.stats_2023.injuries}</div>
+                    <div className="triad-val text-orange">{btp_jurisdiction?.historical_signals?.injuries_2023 || 0}</div>
                     <div className="triad-lbl">Injuries</div>
-                    <div className="triad-delta text-red">
-                      <ArrowUpRight size={12} />
-                      <span>{corridor.stats_2023.injuries_yoy.split(' ')[0]}</span>
-                    </div>
-                    <div className="triad-period">vs. 2022</div>
+                    <div className="triad-period">2023 Recorded</div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* ROW 2: Why it happens + Who is vulnerable? */}
-            <div className="causes-vulnerability-row">
-              {/* Left: Why it happens */}
-              <div className="diagnostic-card">
-                <div className="card-section-label">
-                  Why it happens <span className="sub-label">(Key Contributing Factors)</span>
+            {/* Vulnerable Road Users Summary */}
+            <div className="vru-summary-card">
+              <div className="card-section-label">Primary Vulnerable Road User</div>
+              <div className="vru-content-row">
+                <div className="vru-avatar-circle">
+                  <Bike size={22} className="text-red" />
                 </div>
-                <div className="factors-progress-list">
-                  {corridor.why_it_happens.map((item, idx) => (
+                <div className="vru-text-meta">
+                  <div className="vru-cohort-name">{vulnerable_road_users?.primary_vulnerable_group || 'Two-Wheelers'}</div>
+                  <div className="vru-risk-badges">
+                    <span className="risk-tag tag-red">Two-Wheelers: {vulnerable_road_users?.two_wheeler_risk}</span>
+                    <span className="risk-tag tag-amber">Pedestrians: {vulnerable_road_users?.pedestrian_risk}</span>
+                  </div>
+                </div>
+              </div>
+              <p className="vru-justification">{vulnerable_road_users?.justification}</p>
+            </div>
+
+            {/* Quick Action to Simulator */}
+            <div className="simulator-callout-card">
+              <div className="callout-left">
+                <Sparkles size={20} className="text-blue" />
+                <div>
+                  <div className="callout-title">Simulate Targeted Interventions</div>
+                  <div className="callout-sub">Test lighting upgrades, speed radar, and junction redesign for this segment.</div>
+                </div>
+              </div>
+              <button className="primary-action-btn" onClick={onOpenSimulator}>
+                <Sliders size={14} />
+                <span>Simulate</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: RISK FACTORS */}
+        {activeTab === 'risk_factors' && (
+          <div className="risk-factors-tab-flow">
+            {/* AI Risk Explanation Summary */}
+            <div className="risk-summary-card">
+              <div className="card-section-label">Diagnostic Summary</div>
+              <p className="risk-summary-text">{risk_explanation?.summary}</p>
+            </div>
+
+            {/* Top Contributing Factors Progress List */}
+            <div className="factors-card">
+              <div className="card-section-label">Top Contributing Features (Relative Weight)</div>
+              <div className="factors-progress-list">
+                {(risk_explanation?.top_contributing_factors || []).map((factor, idx) => {
+                  const increases = factor.direction === 'increases_risk';
+                  return (
                     <div key={idx} className="factor-bar-row">
                       <div className="factor-bar-labels">
-                        <span className="factor-name">{item.factor}</span>
-                        <span className="factor-pct">{item.percentage}%</span>
+                        <span className="factor-name">{factor.label}</span>
+                        <span className={`factor-dir-pill ${increases ? 'dir-hazard' : 'dir-mitigate'}`}>
+                          {increases ? '▲ Increases Hazard' : '▼ Mitigates Hazard'}
+                        </span>
+                        <span className="factor-pct">{factor.relative_contribution_pct}%</span>
                       </div>
                       <div className="factor-track">
                         <div 
                           className="factor-fill" 
                           style={{ 
-                            width: `${item.percentage}%`,
-                            backgroundColor: item.color 
+                            width: `${Math.min(factor.relative_contribution_pct, 100)}%`,
+                            backgroundColor: increases ? '#EF4444' : '#10B981'
                           }}
-                        ></div>
+                        />
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Right: Who is vulnerable? */}
-              <div className="diagnostic-card">
-                <div className="card-section-label">Who is vulnerable?</div>
-                <div className="vulnerability-list">
-                  {corridor.vulnerable_groups.map((group, idx) => {
-                    let IconComponent = Bike;
-                    if (group.icon === 'pedestrian') IconComponent = Footprints;
-                    if (group.icon === 'car') IconComponent = Car;
-                    if (group.icon === 'bus') IconComponent = Bus;
-
-                    return (
-                      <div key={idx} className="vulnerable-item-row">
-                        <div className="vuln-left">
-                          <IconComponent size={15} style={{ color: group.color }} />
-                          <span className="vuln-name">{group.group}</span>
-                        </div>
-                        <span className="vuln-percentage" style={{ color: group.color }}>
-                          {group.percentage}%
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* ROW 3: When risk is highest + AI Prediction */}
-            <div className="temporal-prediction-row">
-              {/* Left: When risk is highest */}
-              <div className="diagnostic-card">
-                <div className="card-section-label">When risk is highest</div>
-                <div className="peak-hours-callout">
-                  <Clock size={16} className="text-amber" />
-                  <span className="peak-hours-time">{corridor.peak_risk.time_range}</span>
-                </div>
-                <p className="peak-hours-desc">{corridor.peak_risk.description}</p>
-
-                {/* Hourly Bar Histogram */}
-                <div className="hourly-histogram-wrap">
-                  <div className="histogram-bars-row">
-                    {corridor.peak_risk.hourly_bars.map((bar, idx) => (
-                      <div key={idx} className="hist-bar-col">
-                        <div 
-                          className="hist-bar-fill" 
-                          style={{ 
-                            height: `${bar.value}%`,
-                            backgroundColor: bar.value > 80 ? '#F59E0B' : '#CBD5E1'
-                          }}
-                        ></div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="histogram-labels-row">
-                    <span>6PM</span>
-                    <span>9PM</span>
-                    <span>12AM</span>
-                    <span>3AM</span>
-                    <span>6AM</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right: AI Prediction (Next 12 Months) */}
-              <div className="diagnostic-card">
-                <div className="card-section-label">AI Prediction <span className="sub-label">(Next 12 Months)</span></div>
-                <div className="ai-prediction-badges">
-                  <div className="prediction-risk-tag text-red">
-                    <TrendingUp size={14} />
-                    <span>{corridor.ai_prediction.risk_level}</span>
-                  </div>
-                  <div className="confidence-pill">{corridor.ai_prediction.confidence}</div>
-                </div>
-
-                <div className="prediction-callout-text">
-                  <strong>{corridor.ai_prediction.expected_crashes}</strong> {corridor.ai_prediction.context}
-                </div>
-
-                {/* Smooth Rising Curve SVG */}
-                <div className="prediction-sparkline-wrap">
-                  <svg className="sparkline-svg" viewBox="0 0 160 55" preserveAspectRatio="none">
-                    <path
-                      d="M 10 45 Q 40 40, 70 32 T 130 18 T 155 8"
-                      fill="none"
-                      stroke="#EF4444"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                    />
-                    <path
-                      d="M 10 45 Q 40 40, 70 32 T 130 18 T 155 8 L 155 55 L 10 55 Z"
-                      fill="rgba(239, 68, 68, 0.08)"
-                    />
-                    <circle cx="155" cy="8" r="3" fill="#EF4444" />
-                  </svg>
-                  <div className="sparkline-months-row">
-                    <span>Jan</span>
-                    <span>Mar</span>
-                    <span>May</span>
-                    <span>Jul</span>
-                    <span>Sep</span>
-                    <span>Nov</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ROW 4: Recommended Interventions */}
-            <div className="recommended-interventions-section">
-              <div className="interventions-header-row">
-                <h4 className="interventions-title">
-                  Recommended Interventions <span className="sub-label">(Ranked by Expected Impact)</span>
-                </h4>
-                <button 
-                  className="view-all-link-btn"
-                  onClick={() => setActiveTab('interventions')}
-                >
-                  View all →
-                </button>
-              </div>
-
-              {/* Table Column Labels */}
-              <div className="interventions-table-header">
-                <div className="col-intervention">Intervention</div>
-                <div className="col-cost">Cost</div>
-                <div className="col-reduction">Est. Accident Reduction</div>
-                <div className="col-lives">Lives Saved / Year</div>
-              </div>
-
-              {/* Interventions List */}
-              <div className="interventions-cards-stack">
-                {corridor.interventions.map((item) => (
-                  <div key={item.id} className="intervention-table-row">
-                    {/* Rank Badge + Title & Subtitle */}
-                    <div className="col-intervention intervention-main-info">
-                      <div className="rank-square-badge">{item.rank}</div>
-                      <div className="intervention-text-col">
-                        <div className="item-title-row">
-                          <span className="intervention-item-title">{item.title}</span>
-                          <span className={`category-pill ${item.category === 'Enforcement' ? 'cat-orange' : 'cat-blue'}`}>
-                            {item.category}
-                          </span>
-                        </div>
-                        <div className="intervention-item-sub">{item.subtitle}</div>
-                      </div>
-                    </div>
-
-                    {/* Cost */}
-                    <div className="col-cost cost-val-text">{item.cost}</div>
-
-                    {/* Accident Reduction */}
-                    <div className="col-reduction reduction-val-text">{item.reduction}</div>
-
-                    {/* Lives Saved */}
-                    <div className="col-lives lives-val-text">{item.lives_saved}</div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
         )}
 
-        {/* Tab 2: Risk Factors Deep-Dive */}
-        {activeTab === 'risk_factors' && (
-          <div className="risk-factors-tab-flow">
-            <h4 className="deep-tab-title">Causal Risk Diagnostics & Environmental Telemetry</h4>
-            <p className="deep-tab-sub">Telemetry from Bengaluru Traffic Police (BTP) surveillance cameras and field geometric surveys.</p>
-            
-            <div className="factors-matrix-grid">
-              <div className="matrix-card">
-                <div className="matrix-card-title">Lighting & Illumination</div>
-                <div className="matrix-card-val text-red">14.2 Lux <span className="val-unit">(Target: &gt;30 Lux)</span></div>
-                <p className="matrix-desc">Low visibility at night between flyover pillars creates severe blind zones for merging two-wheelers.</p>
+        {/* TAB 3: INFRASTRUCTURE */}
+        {activeTab === 'infrastructure' && (
+          <div className="infrastructure-tab-flow">
+            <div className="infra-grid-container">
+              <div className="infra-data-item">
+                <div className="lbl">Road Classification</div>
+                <div className="val">{infrastructure?.road_type || 'N/A'}</div>
               </div>
 
-              <div className="matrix-card">
-                <div className="matrix-card-title">Sight Distance Conflict</div>
-                <div className="matrix-card-val text-red">42m Stopping Sight <span className="val-unit">(Deficit: 38m)</span></div>
-                <p className="matrix-desc">Sharp curvature on approach reduces braking reaction time for high-velocity vehicles.</p>
+              <div className="infra-data-item">
+                <div className="lbl">Traffic Lanes</div>
+                <div className="val">{infrastructure?.lanes || 'Unspecified'}</div>
               </div>
 
-              <div className="matrix-card">
-                <div className="matrix-card-title">Speed Variance (ΔV)</div>
-                <div className="matrix-card-val text-orange">48 km/h <span className="val-unit">(High Variance)</span></div>
-                <p className="matrix-desc">Fast-moving airport cabs (80 km/h) converging with slow-moving commercial autos (32 km/h).</p>
+              <div className="infra-data-item">
+                <div className="lbl">Speed Limit</div>
+                <div className="val">{infrastructure?.speed_limit_kph ? `${infrastructure.speed_limit_kph} km/h` : '30 km/h'}</div>
               </div>
 
-              <div className="matrix-card">
-                <div className="matrix-card-title">Pedestrian Cross-Traffic</div>
-                <div className="matrix-card-val text-red">1,420 crossings / hr <span className="val-unit">(At Grade)</span></div>
-                <p className="matrix-desc">Heavy tech-park pedestrian flow jaywalking across 6-lane carriageway due to missing skywalk.</p>
+              <div className="infra-data-item">
+                <div className="lbl">Street Lighting</div>
+                <div className="val flex-center-val">
+                  {infrastructure?.street_lighting === 'yes' ? (
+                    <>
+                      <Lightbulb size={14} className="text-green" />
+                      <span>Verified IRC Standard</span>
+                    </>
+                  ) : (
+                    <>
+                      <LightbulbOff size={14} className="text-amber" />
+                      <span>Unverified / Dark Spot</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="infra-data-item">
+                <div className="lbl">Intersection Conflict Density</div>
+                <div className="val">{infrastructure?.junction_density_per_km} junctions/km</div>
+                <div className="sub">{infrastructure?.junction_count} mapped junctions</div>
+              </div>
+
+              <div className="infra-data-item">
+                <div className="lbl">Pedestrian Crossings</div>
+                <div className="val">{infrastructure?.crossing_count} cataloged</div>
+              </div>
+
+              <div className="infra-data-item">
+                <div className="lbl">Transit Bus Stops</div>
+                <div className="val">{infrastructure?.bus_stop_count} stops</div>
+              </div>
+
+              <div className="infra-data-item">
+                <div className="lbl">Segment Length</div>
+                <div className="val">{metrics?.segment_length_m} meters</div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Tab 3: Interactive What-If Safety Simulator */}
+        {/* TAB 4: INTERVENTIONS */}
         {activeTab === 'interventions' && (
           <div className="interventions-tab-flow">
-            <div className="simulator-inline-header">
-              <div>
-                <h4 className="deep-tab-title">Interactive What-If Safety Simulator</h4>
-                <p className="deep-tab-sub">Select proposed safety countermeasures to project risk score reductions and lives saved.</p>
-              </div>
-              <button 
-                className="launch-full-sim-btn"
-                onClick={onOpenSimulator}
-              >
-                <Sliders size={14} />
-                <span>Full City Sandbox</span>
-              </button>
+            <div className="sim-interventions-intro">
+              <div className="card-section-label">Supported Mitigation Measures</div>
+              <p className="intro-text">
+                SafeRoute AI simulates empirical feature changes for this 500m segment using our trained ML risk engine.
+              </p>
             </div>
 
-            {/* Live Projected Impact Bar */}
-            {simulationResult && (
-              <div className="simulation-live-metrics-bar">
-                <div className="sim-stat-col">
-                  <div className="sim-lbl">Current Risk</div>
-                  <div className="sim-val text-red">{simulationResult.original_risk_score} / 100</div>
+            <div className="interventions-preview-list">
+              <div className="intervention-preview-card">
+                <div className="card-top">
+                  <span className="it-title">High-Mast Smart LED Lighting Upgrade</span>
+                  <span className="it-status">
+                    {infrastructure?.street_lighting === 'yes' ? 'Already Verified' : 'Recommended'}
+                  </span>
                 </div>
-                <div className="sim-arrow">→</div>
-                <div className="sim-stat-col">
-                  <div className="sim-lbl">Simulated Risk</div>
-                  <div className="sim-val text-green">{simulationResult.simulated_risk_score} / 100</div>
-                </div>
-                <div className="sim-stat-col">
-                  <div className="sim-lbl">Accident Reduction</div>
-                  <div className="sim-val text-green">-{simulationResult.accident_reduction_pct}%</div>
-                </div>
-                <div className="sim-stat-col">
-                  <div className="sim-lbl">Lives Saved / Yr</div>
-                  <div className="sim-val text-green">+{simulationResult.total_lives_saved_yearly} Lives</div>
-                </div>
-                <div className="sim-stat-col">
-                  <div className="sim-lbl">Total Budget</div>
-                  <div className="sim-val">₹{simulationResult.total_cost_lakhs} Lakhs</div>
-                </div>
+                <p className="it-desc">Eliminates night dark spots, raising ambient illumination to IRC standards.</p>
               </div>
-            )}
 
-            {/* Checklist of Interventions */}
-            <div className="interactive-countermeasures-list">
-              {corridor.interventions.map((item) => {
-                const isChecked = activeInterventionIds.includes(item.id);
-                return (
-                  <div 
-                    key={item.id} 
-                    className={`countermeasure-item ${isChecked ? 'active-countermeasure' : ''}`}
-                    onClick={() => toggleIntervention(item.id)}
-                  >
-                    <input 
-                      type="checkbox" 
-                      checked={isChecked} 
-                      onChange={() => {}} // Handled by div onClick
-                      className="countermeasure-check"
-                    />
-                    <div className="countermeasure-content">
-                      <div className="countermeasure-title-row">
-                        <span className="countermeasure-title">{item.title}</span>
-                        <span className="countermeasure-badge">{item.category}</span>
-                      </div>
-                      <div className="countermeasure-sub">{item.subtitle} • Implementation: {item.timeframe}</div>
-                    </div>
-                    <div className="countermeasure-impact-stats">
-                      <div className="impact-cost">{item.cost}</div>
-                      <div className="impact-reduction text-green">{item.reduction} crashes</div>
-                      <div className="impact-lives text-green">{item.lives_saved} lives/yr</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+              <div className="intervention-preview-card">
+                <div className="card-top">
+                  <span className="it-title">Automated Speed Violation Radar</span>
+                  <span className="it-status">Applicable</span>
+                </div>
+                <p className="it-desc">Enforces speed limit compliance upstream of high-speed conflict zones.</p>
+              </div>
 
-        {/* Tab 4: Historical Trends */}
-        {activeTab === 'trends' && (
-          <div className="trends-tab-flow">
-            <h4 className="deep-tab-title">Corridor Casualty Trends (2019 – 2024)</h4>
-            <p className="deep-tab-sub">Historical longitudinal crash records mapped across seasonal rainfall and transit phases.</p>
-            <div className="trend-historical-card">
-              <div className="trend-year-stat">
-                <span className="stat-yr">2023:</span> 142 crashes (23 fatal, 118 serious injuries)
+              <div className="intervention-preview-card">
+                <div className="card-top">
+                  <span className="it-title">Intersection Geometric Redesign</span>
+                  <span className="it-status">
+                    {infrastructure?.junction_count > 0 ? 'High Priority' : 'Standard'}
+                  </span>
+                </div>
+                <p className="it-desc">Realigns entry/exit lanes to reduce turning friction and side-swipe collisions.</p>
               </div>
-              <div className="trend-year-stat">
-                <span className="stat-yr">2022:</span> 112 crashes (19 fatal, 93 serious injuries)
-              </div>
-              <div className="trend-year-stat">
-                <span className="stat-yr">2021:</span> 98 crashes (15 fatal, 81 serious injuries)
-              </div>
-              <div className="trend-year-stat">
-                <span className="stat-yr">2020:</span> 74 crashes (Lockdown impacted periods)
-              </div>
-              <div className="trend-year-stat">
-                <span className="stat-yr">2019:</span> 126 crashes (Pre-metro construction baseline)
+
+              <div className="intervention-preview-card">
+                <div className="card-top">
+                  <span className="it-title">Zebra Crossing with Median Refuge</span>
+                  <span className="it-status">Applicable</span>
+                </div>
+                <p className="it-desc">Provides safe mid-block pedestrian passage near high-transit nodes.</p>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* Tab 5: Site Gallery */}
-        {activeTab === 'gallery' && (
-          <div className="gallery-tab-flow">
-            <h4 className="deep-tab-title">Corridor Photographic Documentation</h4>
-            <div className="gallery-grid">
-              <img src={corridor.banner_image} alt="Night drone" className="gallery-photo" />
-              <img src={corridor.image} alt="Junction day" className="gallery-photo" />
-            </div>
+            <button className="full-simulator-cta-btn" onClick={onOpenSimulator}>
+              <Sliders size={16} />
+              <span>Launch Interactive What-If Simulator</span>
+            </button>
           </div>
         )}
       </div>

@@ -1,47 +1,66 @@
 import React, { useState } from 'react';
 import { 
   Search, 
-  SlidersHorizontal, 
-  Car, 
-  Skull, 
-  Footprints, 
   ChevronLeft, 
   ChevronRight, 
   Route, 
   X, 
-  AlertCircle 
+  AlertCircle,
+  LightbulbOff,
+  GitMerge
 } from 'lucide-react';
 
 export default function CorridorList({ 
   corridors = [], 
-  selectedCorridor, 
-  onSelectCorridor, 
+  segments = [],
+  selectedSegmentId, 
+  onSelectSegment,
+  selectedCorridorId = 'ALL',
+  onSelectCorridor,
   isCollapsed = false, 
-  onToggleCollapse 
+  onToggleCollapse,
+  loading = false
 }) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeFilter, setActiveFilter] = useState('ALL');
+  const [activeTierFilter, setActiveTierFilter] = useState('ALL');
 
-  const filteredCorridors = corridors.filter((c) => {
+  // Filter segments based on search, corridor, and risk tier
+  const filteredSegments = segments.filter((feat) => {
+    const p = feat.properties || {};
     const term = searchTerm.toLowerCase().trim();
+
+    // 1. Search Query Match
     const matchesSearch = !term || (
-      (c.name || '').toLowerCase().includes(term) ||
-      (c.corridor_name || '').toLowerCase().includes(term) ||
-      (c.location || '').toLowerCase().includes(term) ||
-      (c.highway || '').toLowerCase().includes(term) ||
-      (c.risk_tier || '').toLowerCase().includes(term)
+      (p.segment_id || '').toLowerCase().includes(term) ||
+      (p.road_name || '').toLowerCase().includes(term) ||
+      (p.corridor_name || '').toLowerCase().includes(term) ||
+      (p.btp_station || '').toLowerCase().includes(term) ||
+      (p.risk_tier || '').toLowerCase().includes(term)
     );
-    
-    if (activeFilter === 'ALL') return matchesSearch;
-    if (activeFilter === 'CRITICAL') return matchesSearch && (c.risk_tier || '').toLowerCase() === 'critical';
-    if (activeFilter === 'HIGH') return matchesSearch && (c.risk_tier || '').toLowerCase() === 'high';
-    if (activeFilter === 'MEDIUM') return matchesSearch && (c.risk_tier || '').toLowerCase() === 'medium';
-    return matchesSearch;
+
+    if (!matchesSearch) return false;
+
+    // 2. Corridor Filter
+    if (selectedCorridorId !== 'ALL' && p.corridor_id !== selectedCorridorId) {
+      return false;
+    }
+
+    // 3. Risk Tier Filter
+    if (activeTierFilter !== 'ALL' && (p.risk_tier || '').toUpperCase() !== activeTierFilter) {
+      return false;
+    }
+
+    return true;
   });
 
-  const criticalCount = corridors.filter((c) => (c.risk_tier || '').toLowerCase() === 'critical').length;
-  const highCount = corridors.filter((c) => (c.risk_tier || '').toLowerCase() === 'high').length;
-  const mediumCount = corridors.filter((c) => (c.risk_tier || '').toLowerCase() === 'medium').length;
+  // Calculate counts across the active corridor
+  const corridorSegments = selectedCorridorId === 'ALL' 
+    ? segments 
+    : segments.filter(f => f.properties?.corridor_id === selectedCorridorId);
+
+  const criticalCount = corridorSegments.filter(f => (f.properties?.risk_tier || '').toUpperCase() === 'CRITICAL').length;
+  const highCount = corridorSegments.filter(f => (f.properties?.risk_tier || '').toUpperCase() === 'HIGH').length;
+  const mediumCount = corridorSegments.filter(f => (f.properties?.risk_tier || '').toUpperCase() === 'MEDIUM').length;
 
   if (isCollapsed) {
     return (
@@ -57,21 +76,22 @@ export default function CorridorList({
         <div className="collapsed-corridors-spine">
           <Route size={16} className="text-muted" />
           <div className="vertical-spine-text">
-            <span>{corridors.length} Corridors</span>
+            <span>{segments.length} Segments</span>
           </div>
 
           <div className="mini-pills-stack">
-            {corridors.slice(0, 6).map(c => {
-              const isSelected = selectedCorridor && selectedCorridor.id === c.id;
-              const isCritical = (c.risk_tier || '').toLowerCase() === 'critical';
+            {segments.slice(0, 8).map(feat => {
+              const p = feat.properties || {};
+              const isSelected = selectedSegmentId === p.segment_id;
+              const isCrit = (p.risk_tier || '').toUpperCase() === 'CRITICAL';
               return (
                 <button
-                  key={c.id}
-                  className={`mini-score-dot ${isCritical ? 'bg-red' : 'bg-orange'} ${isSelected ? 'is-selected' : ''}`}
-                  onClick={() => onSelectCorridor(c)}
-                  title={`${c.name} (${c.risk_score}/100)`}
+                  key={p.segment_id}
+                  className={`mini-score-dot ${isCrit ? 'bg-red' : 'bg-orange'} ${isSelected ? 'is-selected' : ''}`}
+                  onClick={() => onSelectSegment && onSelectSegment(p.segment_id)}
+                  title={`${p.segment_id}: Safety ${Math.round(p.safety_score || 0)}`}
                 >
-                  {c.risk_score}
+                  {Math.round(p.safety_score || 0)}
                 </button>
               );
             })}
@@ -88,12 +108,9 @@ export default function CorridorList({
         <div className="corridors-title-row">
           <div className="corridors-title-left">
             <h2 className="panel-title">Road Corridors</h2>
-            <span className="corridors-count-chip">{corridors.length}</span>
+            <span className="corridors-count-chip">{segments.length} segments</span>
           </div>
           <div className="header-actions-group">
-            <button className="filter-sliders-btn" title="Filter Settings">
-              <SlidersHorizontal size={14} />
-            </button>
             <button 
               className="corridor-collapse-btn" 
               onClick={onToggleCollapse}
@@ -103,14 +120,36 @@ export default function CorridorList({
             </button>
           </div>
         </div>
-        <p className="panel-subtitle">Explore and analyse high-risk corridors</p>
+        <p className="panel-subtitle">Explore 500m high-risk road network segments</p>
+
+        {/* Corridor Breakdown Pills (ORR, OMR, HOSUR) */}
+        {corridors.length > 0 && (
+          <div className="corridor-selector-chips">
+            <button
+              className={`corridor-chip ${selectedCorridorId === 'ALL' ? 'active' : ''}`}
+              onClick={() => onSelectCorridor && onSelectCorridor('ALL')}
+            >
+              All ({segments.length})
+            </button>
+            {corridors.map(c => (
+              <button
+                key={c.corridor_id}
+                className={`corridor-chip ${selectedCorridorId === c.corridor_id ? 'active' : ''}`}
+                onClick={() => onSelectCorridor && onSelectCorridor(c.corridor_id)}
+                title={`${c.corridor_name} — Avg Safety: ${c.average_safety_score}/100`}
+              >
+                {c.corridor_id} ({c.segment_count})
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Search Field */}
         <div className="corridors-search-box">
           <Search size={14} className="search-icon" />
           <input
             type="text"
-            placeholder="Search road, junction or area..."
+            placeholder="Filter by road, ID or police station..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -125,107 +164,112 @@ export default function CorridorList({
           )}
         </div>
 
-        {/* Filter Pills */}
+        {/* Risk Tier Filter Tabs */}
         <div className="corridors-filter-tabs">
           <button 
-            className={`filter-tab-pill ${activeFilter === 'ALL' ? 'active' : ''}`}
-            onClick={() => setActiveFilter('ALL')}
+            className={`filter-tab-pill ${activeTierFilter === 'ALL' ? 'active' : ''}`}
+            onClick={() => setActiveTierFilter('ALL')}
           >
-            All ({corridors.length})
+            All ({corridorSegments.length})
           </button>
           <button 
-            className={`filter-tab-pill ${activeFilter === 'CRITICAL' ? 'active' : ''}`}
-            onClick={() => setActiveFilter('CRITICAL')}
+            className={`filter-tab-pill ${activeTierFilter === 'CRITICAL' ? 'active' : ''}`}
+            onClick={() => setActiveTierFilter('CRITICAL')}
           >
             Critical ({criticalCount})
           </button>
           <button 
-            className={`filter-tab-pill ${activeFilter === 'HIGH' ? 'active' : ''}`}
-            onClick={() => setActiveFilter('HIGH')}
+            className={`filter-tab-pill ${activeTierFilter === 'HIGH' ? 'active' : ''}`}
+            onClick={() => setActiveTierFilter('HIGH')}
           >
             High ({highCount})
           </button>
           <button 
-            className={`filter-tab-pill ${activeFilter === 'MEDIUM' ? 'active' : ''}`}
-            onClick={() => setActiveFilter('MEDIUM')}
+            className={`filter-tab-pill ${activeTierFilter === 'MEDIUM' ? 'active' : ''}`}
+            onClick={() => setActiveTierFilter('MEDIUM')}
           >
             Medium ({mediumCount})
           </button>
         </div>
       </div>
 
-      {/* Corridors Scrollable List */}
+      {/* Segments Scrollable List */}
       <div className="corridors-cards-scroll">
-        {filteredCorridors.length === 0 ? (
+        {loading ? (
+          <div className="corridors-loading-state">
+            <div className="map-loading-spinner"></div>
+            <span>Fetching live segments...</span>
+          </div>
+        ) : filteredSegments.length === 0 ? (
           <div className="corridors-empty-state">
             <AlertCircle size={22} className="text-muted empty-icon" />
-            <div className="empty-title">No matching corridors</div>
-            <p className="empty-sub">No results for "{searchTerm}". Try clearing your search or filters.</p>
+            <div className="empty-title">No matching road segments</div>
+            <p className="empty-sub">
+              {searchTerm 
+                ? `No segments found matching "${searchTerm}".` 
+                : 'No segments match the selected corridor and tier filters.'}
+            </p>
             <button 
               className="empty-reset-btn"
               onClick={() => {
                 setSearchTerm('');
-                setActiveFilter('ALL');
+                setActiveTierFilter('ALL');
+                if (onSelectCorridor) onSelectCorridor('ALL');
               }}
             >
               Reset Filters
             </button>
           </div>
         ) : (
-          filteredCorridors.map((item) => {
-            const isSelected = selectedCorridor && selectedCorridor.id === item.id;
-            const tierLower = (item.risk_tier || '').toLowerCase();
-            const isCritical = tierLower === 'critical';
-            const isHigh = tierLower === 'high';
+          filteredSegments.map((feat) => {
+            const p = feat.properties || {};
+            const isSelected = selectedSegmentId === p.segment_id;
+            const tier = (p.risk_tier || '').toUpperCase();
             
-            let scoreBgClass = 'score-red';
-            if (isHigh) scoreBgClass = 'score-orange';
-            if (tierLower === 'medium') scoreBgClass = 'score-amber';
+            let badgeClass = 'score-green';
+            if (tier === 'CRITICAL') badgeClass = 'score-red';
+            else if (tier === 'HIGH') badgeClass = 'score-orange';
+            else if (tier === 'MEDIUM') badgeClass = 'score-amber';
 
             return (
               <div
-                key={item.id}
+                key={p.segment_id}
                 className={`corridor-list-card ${isSelected ? 'selected' : ''}`}
-                onClick={() => onSelectCorridor(item)}
+                onClick={() => onSelectSegment && onSelectSegment(p.segment_id)}
               >
-                {/* Thumbnail Image */}
-                <div className="corridor-thumb-wrap">
-                  <img 
-                    src={item.image} 
-                    alt={item.name} 
-                    className="corridor-thumb-img"
-                    onError={(e) => {
-                      e.target.src = 'https://images.unsplash.com/photo-1545459720-aac8509eb02c?auto=format&fit=crop&w=200&q=80';
-                    }}
-                  />
-                </div>
-
-                {/* Card Main Info */}
-                <div className="corridor-info-col">
-                  <div className="corridor-card-name">{item.name}</div>
-                  <div className="corridor-card-sub">{item.corridor_name}</div>
-
-                  {/* 3 Micro Stats */}
-                  <div className="corridor-stats-row">
-                    <div className="micro-stat">
-                      <Car size={12} className="text-muted" />
-                      <span>{item.stats_2023?.crashes ?? 0}</span>
-                    </div>
-                    <div className="micro-stat">
-                      <Skull size={12} className="text-muted" />
-                      <span>{item.stats_2023?.deaths ?? 0}</span>
-                    </div>
-                    <div className="micro-stat">
-                      <Footprints size={12} className="text-muted" />
-                      <span>{item.stats_2023?.injuries ?? 0}</span>
-                    </div>
+                <div className="corridor-card-info">
+                  <div className="corridor-name-row">
+                    <span className="corridor-road-name" title={p.road_name}>
+                      {p.road_name || 'Segment'}
+                    </span>
+                    <span className={`corridor-score-badge ${badgeClass}`}>
+                      {Math.round(p.safety_score || 0)} Safety
+                    </span>
                   </div>
-                </div>
 
-                {/* Circular Risk Score Badge */}
-                <div className="corridor-score-badge-col">
-                  <div className={`circular-score-pill ${scoreBgClass}`}>
-                    {item.risk_score}
+                  <div className="corridor-sub-row">
+                    <span className="corridor-id-tag">{p.segment_id}</span>
+                    <span className="corridor-dot">•</span>
+                    <span className="corridor-loc-text">{p.btp_station || p.corridor_name}</span>
+                  </div>
+
+                  {/* Infrastructure Attributes */}
+                  <div className="corridor-stats-row">
+                    {p.junction_count > 0 && (
+                      <span className="stat-pill" title={`${p.junction_count} intersections`}>
+                        <GitMerge size={11} className="text-red" />
+                        <span>{p.junction_count} junctions</span>
+                      </span>
+                    )}
+                    {p.street_lighting !== 'yes' && (
+                      <span className="stat-pill" title="Unverified ambient lighting">
+                        <LightbulbOff size={11} className="text-amber" />
+                        <span>Dark spot</span>
+                      </span>
+                    )}
+                    <span className="stat-pill tier-pill">
+                      {tier}
+                    </span>
                   </div>
                 </div>
               </div>

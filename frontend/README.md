@@ -1,16 +1,50 @@
-# React + Vite
+# 🛣️ SafeRoute AI — Frontend Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React 19 + Vite 8 command center application for **SafeRoute AI (Bengaluru NightRide)**.
 
-Currently, two official plugins are available:
+## 🚀 Live Data Architecture
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The frontend is connected directly to the FastAPI backend with **zero mock fallback data**:
+- **All 428 road segments** are loaded live via `GET /api/v1/segments` as a GeoJSON FeatureCollection.
+- **City overview KPIs** are aggregated directly from `GET /api/v1/analytics/summary`.
+- **Road segment telemetry** (crash counts, BTP station jurisdiction, SHAP feature importance, and VRU counts) is fetched on-demand via `GET /api/v1/segments/{segment_id}`.
+- **Intervention What-If Simulations** run live on `POST /api/v1/simulate`, recalculating safety scores and injury reductions via the server-side ML model.
+- If the backend is unreachable, the application displays an explicit connection error state rather than falling back to fake statistics.
 
-## React Compiler
+## 🛠️ Setup & Development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 1. Configure Environment Variables
+Copy `.env.example` to `.env`:
+```bash
+cp .env.example .env
+```
+Default configuration:
+```env
+VITE_API_BASE_URL=http://localhost:8000/api/v1
+```
 
-## Expanding the Oxlint configuration
+### 2. Install Dependencies
+```bash
+npm install
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+### 3. Run Development Server
+```bash
+npm run dev
+```
+
+### 4. Lint & Build
+```bash
+# Oxlint static analysis (zero warnings, zero errors)
+npm run lint
+
+# Production bundle build
+npm run build
+```
+
+## 🗺️ Key Features
+- **Satellite & Vector Map**: Real Leaflet LineStrings for all 428 segments color-coded by ML risk tier (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`).
+- **Real Feature Layer Filters**: Toggles for Dark Spots (unlit segments), High-Conflict Junctions, Pedestrian Crossings, and Night Risk Multipliers.
+- **Segment Inspector**: Detailed view showing BTP historical statistics, speed limits, crossing density, and ML factor importance.
+- **What-If Simulation**: Test the safety impact of smart street lighting, speed enforcement cameras, pedestrian refuges, traffic calming, and junction redesigns.
+- **Quick Search (⌘K / Ctrl+K)**: Instant keyboard palette searching across all 428 segments, road names, and BTP police stations.

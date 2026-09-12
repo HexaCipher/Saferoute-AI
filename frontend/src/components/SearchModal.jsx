@@ -1,45 +1,39 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, MapPin, AlertCircle, ArrowRight, CornerDownLeft } from 'lucide-react';
+import { Search, X, MapPin, AlertCircle, CornerDownLeft } from 'lucide-react';
 
 export default function SearchModal({ 
   isOpen, 
   onClose, 
-  corridors = [], 
-  onSelectCorridor 
+  segments = [], 
+  onSelectSegment 
 }) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
   const resultsContainerRef = useRef(null);
 
-  // Quick suggestion tags
-  const SUGGESTIONS = ['Silk Board', 'Hebbal', 'Outer Ring Road', 'Hosur Road', 'Critical', 'NH 44'];
+  // Quick suggestion tags matching real database entities
+  const SUGGESTIONS = ['BLR_ORR_091', 'Outer Ring Road', 'Hosur Road', 'CRITICAL', 'H.A.L Airport', 'Whitefield'];
 
-  const matches = corridors.filter(c => {
+  const matches = segments.filter(feat => {
+    const p = feat.properties || {};
     const term = query.toLowerCase().trim();
     if (!term) return true;
     return (
-      (c.name || '').toLowerCase().includes(term) ||
-      (c.corridor_name || '').toLowerCase().includes(term) ||
-      (c.location || '').toLowerCase().includes(term) ||
-      (c.highway || '').toLowerCase().includes(term) ||
-      (c.risk_tier || '').toLowerCase().includes(term)
+      (p.segment_id || '').toLowerCase().includes(term) ||
+      (p.road_name || '').toLowerCase().includes(term) ||
+      (p.corridor_name || '').toLowerCase().includes(term) ||
+      (p.corridor_id || '').toLowerCase().includes(term) ||
+      (p.btp_station || '').toLowerCase().includes(term) ||
+      (p.risk_tier || '').toLowerCase().includes(term)
     );
-  });
+  }).slice(0, 50); // Limit to top 50 matches for fast rendering
 
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 50);
-      setSelectedIndex(0);
-    } else {
-      setQuery('');
-      setSelectedIndex(0);
     }
   }, [isOpen]);
-
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [query]);
 
   // Keyboard navigation: Arrow Up, Arrow Down, Enter, Escape
   useEffect(() => {
@@ -58,7 +52,10 @@ export default function SearchModal({
       } else if (e.key === 'Enter') {
         e.preventDefault();
         if (matches[selectedIndex]) {
-          onSelectCorridor(matches[selectedIndex]);
+          const segId = matches[selectedIndex].properties?.segment_id;
+          if (onSelectSegment && segId) {
+            onSelectSegment(segId);
+          }
           onClose();
         }
       }
@@ -66,7 +63,7 @@ export default function SearchModal({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, matches, selectedIndex, onClose, onSelectCorridor]);
+  }, [isOpen, matches, selectedIndex, onClose, onSelectSegment]);
 
   if (!isOpen) return null;
 
@@ -79,15 +76,21 @@ export default function SearchModal({
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search road, blackspot junction, highway (e.g. Silk Board, NH 44)..."
+            placeholder="Search road, segment ID, police station, or risk tier (e.g. BLR_ORR_091)..."
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={e => {
+              setQuery(e.target.value);
+              setSelectedIndex(0);
+            }}
             className="palette-search-field"
           />
           {query && (
             <button 
               className="palette-clear-btn" 
-              onClick={() => setQuery('')}
+              onClick={() => {
+                setQuery('');
+                setSelectedIndex(0);
+              }}
               title="Clear search"
             >
               <X size={14} />
@@ -106,7 +109,10 @@ export default function SearchModal({
               <button 
                 key={s} 
                 className="palette-suggestion-chip"
-                onClick={() => setQuery(s)}
+                onClick={() => {
+                  setQuery(s);
+                  setSelectedIndex(0);
+                }}
               >
                 {s}
               </button>
@@ -118,51 +124,58 @@ export default function SearchModal({
         <div className="palette-results-list" ref={resultsContainerRef}>
           <div className="palette-section-title">
             {query 
-              ? `Found ${matches.length} matching corridor${matches.length === 1 ? '' : 's'}` 
-              : `All Monitored Bengaluru Corridors (${corridors.length})`}
+              ? `Found ${matches.length} matching segment${matches.length === 1 ? '' : 's'}` 
+              : `All Monitored Road Segments (${segments.length})`}
           </div>
 
           {matches.length === 0 ? (
             <div className="palette-empty-state">
               <AlertCircle size={28} className="text-muted empty-icon" />
-              <div className="empty-title">No corridors found</div>
+              <div className="empty-title">No road segments found</div>
               <p className="empty-desc">
-                No matching roads or blackspots found for "{query}". Try searching for <strong>Silk Board</strong>, <strong>Hebbal</strong>, or <strong>Outer Ring Road</strong>.
+                No matching segments for "{query}". Try searching by <strong>BLR_ORR</strong>, <strong>Outer Ring Road</strong>, or <strong>CRITICAL</strong>.
               </p>
             </div>
           ) : (
             matches.map((item, idx) => {
+              const p = item.properties || {};
               const isSelected = idx === selectedIndex;
-              const isCritical = item.risk_tier === 'Critical';
-              const isHigh = item.risk_tier === 'High';
+              const tier = (p.risk_tier || '').toUpperCase();
+              const isCrit = tier === 'CRITICAL';
+              const isHigh = tier === 'HIGH';
 
-              let badgeClass = 'score-red';
-              if (isHigh) badgeClass = 'score-orange';
-              if (item.risk_tier === 'Medium') badgeClass = 'score-amber';
+              let badgeClass = 'score-green';
+              if (isCrit) badgeClass = 'score-red';
+              else if (isHigh) badgeClass = 'score-orange';
+              else if (tier === 'MEDIUM') badgeClass = 'score-amber';
 
               return (
                 <div 
-                  key={item.id} 
+                  key={p.segment_id} 
                   className={`palette-result-row ${isSelected ? 'is-highlighted' : ''}`}
                   onMouseEnter={() => setSelectedIndex(idx)}
                   onClick={() => {
-                    onSelectCorridor(item);
+                    if (onSelectSegment && p.segment_id) {
+                      onSelectSegment(p.segment_id);
+                    }
                     onClose();
                   }}
                 >
                   <div className="result-left">
-                    <MapPin size={16} className={isCritical ? 'text-red' : isHigh ? 'text-amber' : 'text-slate'} />
+                    <MapPin size={16} className={isCrit ? 'text-red' : isHigh ? 'text-amber' : 'text-slate'} />
                     <div>
-                      <div className="result-name">{item.name}</div>
-                      <div className="result-sub">{item.corridor_name} • {item.highway || 'Bengaluru Urban'}</div>
+                      <div className="result-name">{p.road_name || 'Road Segment'}</div>
+                      <div className="result-sub">
+                        <span className="code-id">{p.segment_id}</span> • {p.corridor_id} • {p.btp_station || 'Bengaluru'}
+                      </div>
                     </div>
                   </div>
 
                   <div className="result-right">
                     <span className={`result-score-badge ${badgeClass}`}>
-                      {item.risk_score} Risk
+                      {Math.round(p.safety_score || 0)} Safety
                     </span>
-                    <span className="result-tier-pill">{item.risk_tier}</span>
+                    <span className="result-tier-pill">{tier}</span>
                     <CornerDownLeft size={13} className="result-enter-icon" />
                   </div>
                 </div>

@@ -1,48 +1,170 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Sliders, 
-  CheckCircle, 
-  Sparkles, 
-  TrendingDown, 
-  DollarSign, 
-  Heart,
+  Sparkles,
+  RotateCcw,
+  Check,
+  Save,
+  AlertTriangle,
+  ArrowRight,
+  TrendingDown,
   ShieldCheck,
-  RotateCcw
+  FolderOpen
 } from 'lucide-react';
 import { apiService } from '../services/api';
+
+const AVAILABLE_INTERVENTIONS = [
+  {
+    key: 'street_lighting_upgrade',
+    label: 'High-Mast Smart LED Lighting Upgrade',
+    category: 'Lighting & Visibility',
+    description: 'Upgrades unlit dark spots to IRC:SP:72 standards, mitigating night-time pedestrian & two-wheeler hazards.'
+  },
+  {
+    key: 'speed_enforcement_camera',
+    label: 'Automated Speed Violation Radar',
+    category: 'Enforcement',
+    description: 'Enforces posted speed limit compliance upstream of high-speed conflict zones.'
+  },
+  {
+    key: 'pedestrian_crossing_refuge',
+    label: 'Zebra Crossing with Median Refuge Island',
+    category: 'Pedestrian Infrastructure',
+    description: 'Grade-level mid-block protected crossing for vulnerable pedestrians near transit stops.'
+  },
+  {
+    key: 'speed_calming_measures',
+    label: 'Rumble Strips & Speed Tables',
+    category: 'Traffic Calming',
+    description: 'Physical geometric speed calming upstream of conflict points.'
+  },
+  {
+    key: 'junction_redesign',
+    label: 'Intersection Channelization & Geometric Redesign',
+    category: 'Geometric Engineering',
+    description: 'Realigns entry/exit lanes to reduce turning friction and side-swipe collisions.'
+  }
+];
 
 export default function SimulatorModal({ 
   isOpen, 
   onClose, 
-  corridors, 
-  initialCorridor 
+  segments = [], 
+  initialSegmentId 
 }) {
-  const [selectedCorridorId, setSelectedCorridorId] = useState(initialCorridor?.id || corridors[0]?.id);
-  const [checkedInterventions, setCheckedInterventions] = useState(['INT-01', 'INT-02']);
+  const [selectedSegmentId, setSelectedSegmentId] = useState('');
+  const [checkedInterventions, setCheckedInterventions] = useState(['street_lighting_upgrade', 'speed_enforcement_camera']);
+  const [simulationResult, setSimulationResult] = useState(null);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simError, setSimError] = useState(null);
+  
+  // Scenario saving states
+  const [scenarioName, setScenarioName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [savedScenarios, setSavedScenarios] = useState([]);
+  const [activeTab, setActiveTab] = useState('simulate'); // 'simulate' | 'saved'
+
+  const activeSegmentId = selectedSegmentId || initialSegmentId || segments[0]?.properties?.segment_id || '';
+
+  // Execute simulation via live backend POST /api/v1/simulate
+  useEffect(() => {
+    if (!isOpen || !activeSegmentId) return;
+
+    let isMounted = true;
+    async function executeSimulation() {
+      try {
+        setIsSimulating(true);
+        setSimError(null);
+        const res = await apiService.simulateInterventions(activeSegmentId, checkedInterventions);
+        if (isMounted) {
+          setSimulationResult(res);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setSimError(err.message || 'Simulation failed');
+        }
+      } finally {
+        if (isMounted) {
+          setIsSimulating(false);
+        }
+      }
+    }
+
+    executeSimulation();
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, activeSegmentId, checkedInterventions]);
+
+  // Fetch saved scenarios
+  useEffect(() => {
+    if (!isOpen || activeTab !== 'saved') return;
+
+    let isMounted = true;
+    async function fetchSavedScenarios() {
+      try {
+        const data = await apiService.getSavedSimulations();
+        if (isMounted) {
+          setSavedScenarios(data || []);
+        }
+      } catch (err) {
+        console.error('Failed to load saved scenarios:', err);
+      }
+    }
+
+    fetchSavedScenarios();
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, activeTab]);
 
   if (!isOpen) return null;
 
-  const currentCorridor = corridors.find(c => c.id === selectedCorridorId) || corridors[0];
-  const sim = apiService.simulateInterventions(currentCorridor, checkedInterventions);
+  const handleModalClose = () => {
+    setSelectedSegmentId('');
+    onClose();
+  };
 
-  const toggleCheck = (id) => {
+  const toggleIntervention = (key) => {
     setCheckedInterventions(prev => 
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
     );
   };
 
   const handleSelectAll = () => {
-    if (!currentCorridor?.interventions) return;
-    setCheckedInterventions(currentCorridor.interventions.map(i => i.id));
+    setCheckedInterventions(AVAILABLE_INTERVENTIONS.map(i => i.key));
   };
 
   const handleReset = () => {
     setCheckedInterventions([]);
   };
 
+  const handleSaveScenario = async () => {
+    if (!scenarioName.trim() || !simulationResult) return;
+    try {
+      setIsSaving(true);
+      await apiService.saveSimulation({
+        segment_id: activeSegmentId,
+        scenario_name: scenarioName.trim(),
+        interventions: checkedInterventions,
+        created_by: 'SafeRoute Urban Engineering'
+      });
+      setSaveSuccess(true);
+      setScenarioName('');
+      setTimeout(() => setSaveSuccess(false), 3000);
+      const data = await apiService.getSavedSimulations();
+      setSavedScenarios(data || []);
+    } catch (err) {
+      alert(`Save failed: ${err.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <div className="modal-backdrop-blur" onClick={onClose}>
+    <div className="modal-backdrop-blur" onClick={handleModalClose}>
       <div className="simulator-modal-window" onClick={e => e.stopPropagation()}>
         {/* Modal Header */}
         <div className="modal-header-bar">
@@ -52,138 +174,244 @@ export default function SimulatorModal({
             </div>
             <div>
               <h3 className="modal-title">What-If Intervention Simulator</h3>
-              <p className="modal-sub">Model safety impact, lives saved, and budget ROI before breaking ground</p>
+              <p className="modal-sub">
+                ML feature mutation via XGBoost RiskEngine — test engineering ROI before deployment
+              </p>
             </div>
           </div>
-          <button className="modal-close-icon-btn" onClick={onClose}>
-            <X size={18} />
-          </button>
+          <div className="modal-header-actions">
+            <div className="sim-tab-toggle">
+              <button 
+                className={`sim-tab-btn ${activeTab === 'simulate' ? 'active' : ''}`}
+                onClick={() => setActiveTab('simulate')}
+              >
+                Simulator
+              </button>
+              <button 
+                className={`sim-tab-btn ${activeTab === 'saved' ? 'active' : ''}`}
+                onClick={() => setActiveTab('saved')}
+              >
+                Saved Scenarios
+              </button>
+            </div>
+            <button className="modal-close-icon-btn" onClick={handleModalClose}>
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Modal Body */}
-        <div className="simulator-modal-body">
-          {/* Corridor Picker Row */}
-          <div className="sim-corridor-select-row">
-            <label className="sim-label">Target Corridor:</label>
-            <select 
-              value={selectedCorridorId} 
-              onChange={e => {
-                setSelectedCorridorId(e.target.value);
-                // Reset defaults for that corridor
-                const nextCorridor = corridors.find(c => c.id === e.target.value);
-                if (nextCorridor?.interventions) {
-                  setCheckedInterventions([nextCorridor.interventions[0]?.id]);
-                }
-              }}
-              className="sim-dropdown"
-            >
-              {corridors.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.corridor_name}) — Risk: {c.risk_score}/100
-                </option>
-              ))}
-            </select>
+        {activeTab === 'simulate' ? (
+          <div className="simulator-modal-body">
+            {/* Target Segment Picker Row */}
+            <div className="sim-corridor-select-row">
+              <label className="sim-label">Target Road Segment:</label>
+              <select 
+                value={activeSegmentId} 
+                onChange={e => setSelectedSegmentId(e.target.value)}
+                className="sim-dropdown"
+              >
+                {segments.map(feat => {
+                  const p = feat.properties || {};
+                  return (
+                    <option key={p.segment_id} value={p.segment_id}>
+                      {p.segment_id} — {p.road_name} ({p.corridor_id}) • Safety: {Math.round(p.safety_score || 0)}/100 [{p.risk_tier}]
+                    </option>
+                  );
+                })}
+              </select>
 
-            <div className="sim-actions-quick">
-              <button className="sim-action-text-btn" onClick={handleSelectAll}>
-                Select All
-              </button>
-              <button className="sim-action-text-btn" onClick={handleReset}>
-                <RotateCcw size={12} />
-                <span>Reset</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Real-time Simulated Impact Scoreboard */}
-          {sim && (
-            <div className="sim-scoreboard-grid">
-              <div className="scoreboard-card score-comparison">
-                <div className="score-duo-row">
-                  <div className="score-item before">
-                    <span className="lbl">Baseline Risk</span>
-                    <span className="val text-red">{sim.original_risk_score}</span>
-                    <span className="unit">/ 100</span>
-                  </div>
-                  <div className="score-arrow-huge">→</div>
-                  <div className="score-item after">
-                    <span className="lbl">Modeled Risk</span>
-                    <span className="val text-green">{sim.simulated_risk_score}</span>
-                    <span className="unit">/ 100</span>
-                  </div>
-                </div>
-                <div className="score-delta-summary text-green">
-                  ↓ {sim.score_reduction_points} points risk drop ({sim.accident_reduction_pct}% safer)
-                </div>
-              </div>
-
-              <div className="scoreboard-card">
-                <div className="sb-icon-row">
-                  <Heart size={16} className="text-red" />
-                  <span className="sb-label">Lives Saved / Year</span>
-                </div>
-                <div className="sb-huge-val text-green">+{sim.total_lives_saved_yearly}</div>
-                <div className="sb-subtext">Estimated based on MoRTH fatality reduction factors</div>
-              </div>
-
-              <div className="scoreboard-card">
-                <div className="sb-icon-row">
-                  <DollarSign size={16} className="text-amber" />
-                  <span className="sb-label">Estimated Capex</span>
-                </div>
-                <div className="sb-huge-val">₹{sim.total_cost_lakhs} <span className="val-unit">Lakhs</span></div>
-                <div className="sb-subtext">Est. economic benefit: ₹{sim.economic_benefit_cr} Cr</div>
+              <div className="sim-actions-quick">
+                <button className="sim-action-text-btn" onClick={handleSelectAll}>
+                  Select All
+                </button>
+                <button className="sim-action-text-btn" onClick={handleReset}>
+                  <RotateCcw size={12} />
+                  <span>Reset</span>
+                </button>
               </div>
             </div>
-          )}
 
-          {/* Interventions Checklist */}
-          <div className="sim-interventions-section">
-            <h4 className="sim-interventions-title">
-              Available Countermeasures for {currentCorridor.name}
-            </h4>
-            <div className="sim-checkbox-list">
-              {currentCorridor.interventions.map((item) => {
-                const isChecked = checkedInterventions.includes(item.id);
-                return (
-                  <div 
-                    key={item.id} 
-                    className={`sim-check-card ${isChecked ? 'active' : ''}`}
-                    onClick={() => toggleCheck(item.id)}
-                  >
-                    <input 
-                      type="checkbox" 
-                      checked={isChecked} 
-                      onChange={() => {}} 
-                      className="sim-checkbox-input"
-                    />
-                    <div className="sim-card-body">
-                      <div className="sim-card-header">
-                        <span className="sim-card-title">{item.title}</span>
-                        <span className="sim-cat-tag">{item.category}</span>
+            {/* Simulated Impact Scoreboard */}
+            {simError ? (
+              <div className="sim-error-banner">
+                <AlertTriangle size={16} className="text-red" />
+                <span>Simulation failed: {simError}</span>
+              </div>
+            ) : simulationResult ? (
+              <div className="sim-scoreboard-grid">
+                {/* Score Transition */}
+                <div className="scoreboard-card score-transition-card">
+                  <div className="sb-label">Safety Score Delta</div>
+                  <div className="score-duo-row">
+                    <div className="score-item">
+                      <span className="lbl">Original</span>
+                      <span className="val text-muted">{simulationResult.original_safety_score?.toFixed(1)}</span>
+                      <span className="unit">/ 100</span>
+                    </div>
+
+                    <div className="score-arrow-huge">
+                      <ArrowRight size={22} />
+                    </div>
+
+                    <div className="score-item">
+                      <span className="lbl">Simulated</span>
+                      <span className="val text-green">{simulationResult.simulated_safety_score?.toFixed(1)}</span>
+                      <span className="unit">/ 100</span>
+                    </div>
+                  </div>
+
+                  <div className="score-delta-summary text-green">
+                    +{simulationResult.score_gain?.toFixed(1)} Safety Gain ({simulationResult.original_risk_tier} → {simulationResult.simulated_risk_tier})
+                  </div>
+                </div>
+
+                {/* Expected Fatality Reduction */}
+                <div className="scoreboard-card">
+                  <div className="sb-icon-row">
+                    <TrendingDown size={16} className="text-green" />
+                    <span className="sb-label">Severe Crash Reduction</span>
+                  </div>
+                  <div className="sb-huge-val text-green">
+                    -{simulationResult.expected_fatality_reduction_pct?.toFixed(1)}%
+                  </div>
+                  <div className="sb-subtext">Projected reduction in night-time severe casualties</div>
+                </div>
+
+                {/* Applied Count */}
+                <div className="scoreboard-card">
+                  <div className="sb-icon-row">
+                    <ShieldCheck size={16} className="text-blue" />
+                    <span className="sb-label">Active Interventions</span>
+                  </div>
+                  <div className="sb-huge-val text-blue">
+                    {simulationResult.applied_interventions?.length || 0} / 5
+                  </div>
+                  <div className="sb-subtext">Simulated empirical features mutated</div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Interventions Selection Checklist */}
+            <div className="sim-interventions-section">
+              <div className="sim-interventions-title">
+                <span>Select Interventions to Test ({checkedInterventions.length} active)</span>
+                {isSimulating && <span className="sim-calculating-hint">Calculating ML features...</span>}
+              </div>
+
+              <div className="sim-checkbox-list">
+                {AVAILABLE_INTERVENTIONS.map((item) => {
+                  const isChecked = checkedInterventions.includes(item.key);
+                  const breakdownItem = simulationResult?.intervention_breakdown?.find(b => b.intervention === item.key);
+
+                  return (
+                    <label 
+                      key={item.key} 
+                      className={`sim-check-card ${isChecked ? 'active' : ''}`}
+                    >
+                      <input 
+                        type="checkbox" 
+                        checked={isChecked}
+                        onChange={() => toggleIntervention(item.key)}
+                        className="sim-checkbox-input"
+                      />
+                      <div className="sim-card-body">
+                        <div className="sim-card-header">
+                          <span className="sim-card-title">{item.label}</span>
+                          <span className="sim-cat-tag">{item.category}</span>
+                        </div>
+                        <p className="sim-card-sub">{item.description}</p>
                       </div>
-                      <div className="sim-card-sub">{item.subtitle} • Ready in: {item.timeframe}</div>
-                    </div>
-                    <div className="sim-card-impact">
-                      <div className="sim-impact-cost">{item.cost}</div>
-                      <div className="sim-impact-reduction text-green">{item.reduction} crashes</div>
-                      <div className="sim-impact-lives text-green">{item.lives_saved} lives</div>
-                    </div>
-                  </div>
-                );
-              })}
+
+                      {breakdownItem && isChecked && (
+                        <div className="sim-card-impact text-green">
+                          +{breakdownItem.isolated_score_gain?.toFixed(1)} pts
+                        </div>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Save Municipal Scenario Form */}
+            <div className="sim-save-scenario-row">
+              <div className="save-input-wrap">
+                <input 
+                  type="text" 
+                  placeholder="Scenario title (e.g. Q3 Smart Lighting & Radar Upgrades)..." 
+                  value={scenarioName}
+                  onChange={e => setScenarioName(e.target.value)}
+                  className="scenario-name-input"
+                />
+                <button 
+                  className="save-scenario-btn"
+                  onClick={handleSaveScenario}
+                  disabled={!scenarioName.trim() || isSaving}
+                >
+                  <Save size={14} />
+                  <span>{isSaving ? 'Saving...' : 'Save Scenario'}</span>
+                </button>
+              </div>
+              {saveSuccess && (
+                <div className="save-success-msg">
+                  <Check size={14} />
+                  <span>Scenario persisted to municipal database!</span>
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        ) : (
+          /* SAVED SCENARIOS VIEW */
+          <div className="simulator-modal-body saved-scenarios-body">
+            <div className="saved-scenarios-header">
+              <FolderOpen size={16} className="text-muted" />
+              <span>Municipal Saved Scenarios ({savedScenarios.length})</span>
+            </div>
+
+            {savedScenarios.length === 0 ? (
+              <div className="saved-empty-state">
+                <p>No saved scenarios found in the municipal database. Run a simulation and save it above.</p>
+              </div>
+            ) : (
+              <div className="saved-scenarios-list">
+                {savedScenarios.map(s => (
+                  <div key={s.id} className="saved-scenario-card">
+                    <div className="saved-card-top">
+                      <span className="saved-title">{s.scenario_name}</span>
+                      <span className="saved-segment">{s.segment_id}</span>
+                    </div>
+                    <div className="saved-meta-row">
+                      <span className="saved-delta text-green">
+                        Safety: {s.original_safety_score?.toFixed(1)} → {s.simulated_safety_score?.toFixed(1)} (+{s.score_gain?.toFixed(1)})
+                      </span>
+                      <span className="saved-tier">
+                        {s.original_risk_tier} → {s.simulated_risk_tier}
+                      </span>
+                      <span className="saved-date">
+                        {s.created_at ? new Date(s.created_at).toLocaleDateString() : 'Recently'}
+                      </span>
+                    </div>
+                    <div className="saved-interventions-tags">
+                      {(s.applied_interventions || []).map(it => (
+                        <span key={it} className="tag-pill">{it.replace(/_/g, ' ')}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Modal Footer */}
         <div className="modal-footer-bar">
           <div className="footer-note">
-            <ShieldCheck size={14} className="text-green" />
-            <span>Simulations are backed by empirical BTP crash records & Bayesian impact models.</span>
+            <Sparkles size={13} className="text-amber" />
+            <span>SafeRoute AI transparently recomputes features via RiskEngine rather than using static constants.</span>
           </div>
           <button className="primary-modal-cta" onClick={onClose}>
-            Apply to Active Plan
+            Done
           </button>
         </div>
       </div>
